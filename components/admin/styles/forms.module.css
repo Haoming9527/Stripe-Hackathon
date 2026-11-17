@@ -1,0 +1,242 @@
+.formSection {
+  border: 1px solid #e3e9f0;
+  border-radius: 10px;
+  background: #fff;
+  padding: 28px;
+  margin-bottom: 22px;
+}
+.formSection h2 {
+  margin: 0 0 7px;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+.formSection > p {
+  margin: 0 0 24px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #62788d;
+}
+.fields {
+  display: grid;
+  gap: 22px;
+}
+.fileImport {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding-top: 4px;
+}
+.fileImportButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 10px 14px;
+  border: 1px solid #dce2eb;
+  border-radius: 7px;
+  background: #fff;
+  color: #425466;
+  font-size: 13px;
+  font-weight: 550;
+}
+.fileImportButton:hover:not(:disabled) {
+  color: #635bff;
+  border-color: #bcb7ff;
+  background: #faf9ff;
+}
+.fileImportHint {
+  color: #62788d;
+  font-size: 12px;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+.importActions {
+  margin-top: 24px;
+}
+.importActions button:disabled {
+  background: #f1f3f7;
+  border-color: #e5e9f0;
+  color: #8997a7;
+  opacity: 1;
+  box-shadow: none;
+}
+.columns {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.columns3 {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.field {
+  display: grid;
+  gap: 7px;
+  align-content: start;
+  color: #0a2540;
+  font-size: 13px;
+  font-weight: 550;
+}
+.field input,
+.field select,
+.field textarea {
+  background: #fff;
+  color: #0a2540;
+  border: 1px solid #cdd8e4;
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 400;
+  padding: 11px 12px;
+  width: 100%;
+  min-width: 0;
+}
+.field textarea {
+  line-height: 1.65;
+  resize: vertical;
+  min-height: 90px;
+}
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: 2px solid #635bff;
+  outline-offset: 2px;
+}
+.field small {
+  color: #7b8ea0;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+.field input:disabled {
+  background: #f6f9fc;
+  color: #62788d;
+}
+.check {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  color: #425a70;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.check input {
+  margin-top: 4px;
+  accent-color: #635bff;
+}
+.repeater {
+  display: grid;
+  gap: 12px;
+}
+.repeatRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr) 30px;
+  gap: 12px;
+  align-items: start;
+  border: 1px solid #e3e9f0;
+  border-radius: 7px;
+  padding: 14px;
+  background: #fbfcfe;
+}
+.remove {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: #8495a6;
+  font-size: 22px;
+  margin-top: 23px;
+  padding: 5px;
+}
+.remove:hover {
+  color: #bd3441;
+}
+.add {
+  justify-self: start;
+  border: 0;
+  background: #f0eeff;
+  color: #635bff;
+  border-radius: 6px;
+  font-size: 12px;
+  padding: 9px 13px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.saveBar {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 22px 0;
+}
+.saveBar p {
+  color: #62788d;
+  font-size: 12px;
+}
+.previewStats {
+  display: flex;
+  gap: 20px;
+  padding: 16px;
+  border-radius: 6px;
+  background: #f6f9fc;
+  margin: 15px 0;
+  font-size: 12px;
+  color: #62788d;
+  flex-wrap: wrap;
+}
+.previewStats strong {
+  color: #0a2540;
+}
+.errors {
+  background: #fff4f4;
+  color: #b2303d;
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.8;
+  margin-bottom: 15px;
+}
+@media (max-width: 800px) {
+  .columns3 {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 540px) {
+  .columns {
+    grid-template-columns: 1fr;
+  }
+  .formSection {
+    padding: 20px;
+  }
+  .repeatRow {
+    grid-template-columns: minmax(0, 1fr) 28px;
+  }
+  .repeatRow .field:nth-child(2) {
+    grid-column: 1;
+  }
+  .remove {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .saveBar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+.participantEditor {
+  min-width: 140px;
+}
+.participantEditor summary {
+  cursor: pointer;
+  color: #635bff;
+  font-weight: 550;
+}
+.participantEditor[open] {
+  min-width: 280px;
+  max-width: 360px;
+}
+.participantEditor > div {
+  padding-top: 20px;
+  white-space: normal;
+}

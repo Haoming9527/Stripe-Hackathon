@@ -1,0 +1,47 @@
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media (max-width: 800px) {
+  :root {
+    --site-header-space: 133px;
+  }
+  .site-header {
+    height: auto;
+    width: calc(100% - 24px);
+    margin: 12px;
+    border-radius: 16px;
+  }
+  .site-header .header-inner {
+    grid-template-columns: 1fr auto;
+    gap: 0 12px;
+    padding: 0 16px 8px;
+  }
+  .site-header .community-logo {
+    width: 180px;
+  }
+  .site-header .main-nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    gap: 24px;
+    font-size: 14px;
+  }
+  .site-header .header-account {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .site-header .account-avatar {
+    display: none;
+  }
+  html {
+    scroll-padding-top: 138px;
+  }
+}

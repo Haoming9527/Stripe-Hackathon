@@ -1,0 +1,352 @@
+.workspace {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  align-items: start;
+  gap: 32px;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 28px 24px 48px;
+}
+.sidebar {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  height: fit-content;
+  min-height: 0;
+  color: #0a2540;
+  padding: 0;
+  position: sticky;
+  top: 112px;
+}
+.brand {
+  display: flex;
+  gap: 11px;
+  align-items: center;
+  font-weight: 650;
+  font-size: 19px;
+  text-decoration: none;
+  color: #fff;
+}
+.brandMark {
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  font-weight: 800;
+  background: #635bff;
+  width: 36px;
+  height: 38px;
+  border-radius: 8px;
+  font-style: italic;
+}
+.brandSub {
+  display: block;
+  color: #9eb3c8;
+  font-size: 11px;
+  font-weight: 450;
+  margin-top: 2px;
+}
+.navigation {
+  display: grid;
+  gap: 16px;
+}
+.navLink {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  color: #000;
+  padding: 4px 0;
+  font-size: 14px;
+  text-decoration: none;
+}
+.navLink span {
+  font-size: 20px;
+  width: 20px;
+}
+.navLink:hover {
+  color: #000;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.sidebarNote {
+  color: #c3d4e4;
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 20px 0;
+  border-top: 1px solid #24415c;
+  margin-top: auto;
+}
+.sidebarNote p {
+  color: #91abc2;
+  margin-top: 8px;
+}
+.noteDot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: #00d4ff;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+.identity {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+.identity > div {
+  min-width: 0;
+}
+.identity strong {
+  display: block;
+  color: #eff5fa;
+  font-size: 12px;
+}
+.identity div > span {
+  display: block;
+  color: #91abc2;
+  font-size: 11px;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.avatar {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background: #28435e;
+  color: #b9d8f5;
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.content {
+  padding: 8px 0 24px;
+  width: 100%;
+  min-width: 0;
+  max-width: 1600px;
+}
+.topline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 32px;
+}
+.topline h1 {
+  margin: 5px 0 10px;
+  font-size: clamp(28px, 3vw, 38px);
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+}
+.topline p {
+  max-width: 600px;
+  margin: 0;
+  color: #62788d;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.titleActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.kicker {
+  color: #635bff;
+  font-size: 13px;
+  font-weight: 600;
+}
+.eventGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.eventCard {
+  border: 1px solid #e3e9f0;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.eventBand {
+  height: 6px;
+  background: linear-gradient(100deg, #635bff, #a28bff, #80e9ff);
+}
+.eventBandEnded {
+  background: #c7d3e0;
+}
+.eventCardBody {
+  padding: 24px;
+}
+.eventMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 22px;
+  font-size: 12px;
+  color: #6b8093;
+}
+.eventCard h2 {
+  font-size: 21px;
+  margin: 0 0 8px;
+  letter-spacing: -0.025em;
+}
+.eventCard h2 a {
+  color: inherit;
+  text-decoration: none;
+}
+.eventCard p {
+  color: #62788d;
+  font-size: 13px;
+  line-height: 1.7;
+  margin-bottom: 22px;
+  min-height: 44px;
+}
+.eventCardBottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #edf1f6;
+  padding-top: 17px;
+  gap: 12px;
+}
+.eventNumbers {
+  display: flex;
+  gap: 18px;
+  color: #62788d;
+  font-size: 12px;
+}
+.eventNumbers strong {
+  color: #0a2540;
+  font-size: 14px;
+}
+.textLink {
+  color: #635bff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.textLink:hover {
+  text-decoration: underline;
+}
+.empty {
+  text-align: left;
+  padding: 24px;
+  background: #fff;
+  border: 1px solid #e3e9f0;
+  border-radius: 10px;
+}
+.emptyIcon {
+  display: inline-grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 14px;
+  background: #f0eeff;
+  color: #635bff;
+  font-size: 28px;
+  margin-bottom: 18px;
+}
+.empty h2 {
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+.empty p {
+  color: #62788d;
+  max-width: 450px;
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.backLink {
+  display: inline-flex;
+  color: #62788d;
+  text-decoration: none;
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+.eventTabs {
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid #dbe4ed;
+  margin: 4px 0 26px;
+  overflow: auto;
+}
+.eventTab {
+  padding: 13px 0;
+  color: #62788d;
+  font-size: 13px;
+  font-weight: 550;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+.eventTabActive {
+  color: #635bff;
+  border-bottom-color: #635bff;
+}
+.loading {
+  padding: 5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #62788d;
+  font-size: 14px;
+}
+.loadingDot {
+  width: 8px;
+  height: 8px;
+  background: #635bff;
+  border-radius: 50%;
+}
+@media (max-width: 1100px) {
+  .workspace {
+    grid-template-columns: 205px minmax(0, 1fr);
+  }
+  .sidebar {
+    padding: 0;
+  }
+}
+@media (max-width: 800px) {
+  .workspace {
+    display: block;
+  }
+  .sidebar {
+    position: static;
+    padding: 0;
+    margin-bottom: 24px;
+  }
+  .navigation {
+    display: grid;
+    gap: 4px;
+  }
+  .navLink {
+    white-space: nowrap;
+    font-size: 14px;
+    padding: 4px 0;
+  }
+  .sidebarNote,
+  .identity {
+    display: none;
+  }
+  .brandSub {
+    display: none;
+  }
+  .content {
+    padding: 0 0 24px;
+  }
+  .eventGrid {
+    grid-template-columns: 1fr;
+  }
+  .topline {
+    flex-direction: column;
+  }
+}
+@media (max-width: 540px) {
+  .eventTabs {
+    gap: 18px;
+  }
+}

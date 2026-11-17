@@ -1,0 +1,152 @@
+.member-list {
+  margin: 9px 0 24px;
+}
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 0;
+  border-bottom: 1px solid #edf0f5;
+}
+.member-row > div {
+  flex: 1;
+  min-width: 0;
+}
+.member-row strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+.member-row small {
+  display: block;
+  font-size: 11px;
+  color: #98a3b1;
+  overflow-wrap: anywhere;
+}
+.member-role {
+  display: inline-block;
+  margin-left: 8px;
+  color: #8f82b3;
+  background: #f1effa;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 9px;
+}
+.invitation-row {
+  padding: 17px 0;
+  border-bottom: 1px solid #edf0f5;
+}
+.invitation-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.invitation-row strong {
+  font-size: 13px;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+.invitation-row small {
+  display: block;
+  font-size: 10px;
+  margin: 5px 0;
+}
+.invitation-row form {
+  margin-top: 12px;
+}
+.small-empty {
+  text-align: center;
+  padding: 25px 10px;
+  color: #a09bb7;
+}
+.small-empty > svg {
+  margin: 0 auto 14px;
+}
+.small-empty .muted {
+  display: block;
+  font-size: 12px;
+  margin-top: 8px;
+}
+.submission-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 290px;
+  gap: 32px;
+  align-items: start;
+}
+.submission-aside .panel {
+  background: #fafbfe;
+}
+.submission-aside p {
+  font-size: 12px;
+  color: #8a97aa;
+}
+.aside-icon {
+  background: #edeaff;
+  border-radius: 8px;
+  padding: 10px;
+  color: #8c7fd0;
+  display: inline-flex;
+  align-self: start;
+}
+.checklist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-size: 11px;
+  color: #7d8fa3;
+}
+.checklist li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.checklist svg {
+  color: #a39bc4;
+}
+.track-picker {
+  border: 0;
+  padding: 0;
+}
+.track-picker legend {
+  font-size: 12px;
+  font-weight: 550;
+  color: #51677f;
+}
+.track-picker .field-hint {
+  margin-bottom: 12px;
+}
+.check-option {
+  display: flex;
+  align-items: start;
+  gap: 10px;
+  border: 1px solid #e3e8ef;
+  border-radius: 7px;
+  padding: 12px;
+  margin-top: 8px;
+}
+.check-option:has(:checked) {
+  border-color: #b9b2f1;
+  background: #fbfaff;
+}
+.check-option strong {
+  font-size: 12px;
+  font-weight: 550;
+}
+.check-option small {
+  display: block;
+  font-size: 11px;
+  color: #99a1b1;
+}
+.consent-option {
+  display: flex;
+  align-items: start;
+  gap: 11px;
+  font-size: 12px;
+  color: #7a8a9d;
+  padding: 16px;
+  border-radius: 7px;
+  background: #f8f9fc;
+}

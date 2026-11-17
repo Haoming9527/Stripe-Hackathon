@@ -1,0 +1,382 @@
+@media (max-width: 760px) {
+  .shell {
+    padding-inline: 22px;
+  }
+  .site-header {
+    height: 70px;
+  }
+  .main-nav {
+    gap: 16px;
+  }
+  .docs-link {
+    display: none;
+  }
+  .brand-word {
+    font-size: 29px;
+  }
+  .brand-community {
+    font-size: 12px;
+  }
+  .brand {
+    gap: 10px;
+  }
+  .brand-divider {
+    height: 18px;
+  }
+  .hero-grid {
+    grid-template-columns: 1fr;
+    gap: 35px;
+  }
+  .home-hero {
+    padding: 45px 0 65px;
+  }
+  .hero-copy h1 {
+    font-size: 66px;
+  }
+  .hero-description {
+    max-width: 460px;
+    font-size: 16px;
+  }
+  .hero-wash {
+    width: 110%;
+    right: -35%;
+    top: 180px;
+    height: 900px;
+  }
+  .builder-scene {
+    max-width: 500px;
+    width: 100%;
+    margin: 0 auto;
+    height: 380px;
+  }
+  .project-mini {
+    left: 35px;
+  }
+  .project-mini strong {
+    font-size: 14px;
+  }
+  .code-lines {
+    font-size: 12px;
+  }
+  .community-strip-inner {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px 25px;
+    font-size: 10px;
+    padding-block: 19px;
+  }
+  .community-strip svg {
+    width: 16px;
+  }
+  .section-aside {
+    display: none;
+  }
+  .events-section {
+    padding-block: 45px;
+  }
+  .event-grid {
+    gap: 18px;
+  }
+  .event-art {
+    height: 170px;
+  }
+  .event-card-content {
+    padding: 18px;
+  }
+  .event-card h3 {
+    font-size: 20px;
+  }
+  .event-meta {
+    font-size: 10px;
+    gap: 8px 14px;
+  }
+  .event-art-shape svg {
+    width: 105px;
+    height: 105px;
+  }
+  .event-art-shape {
+    right: 7%;
+  }
+  .event-art-caption {
+    font-size: 14px;
+  }
+  .event-card p {
+    font-size: 12px;
+  }
+  .build-banner-inner {
+    grid-template-columns: 1fr;
+    gap: 25px;
+    padding-block: 45px;
+  }
+  .build-banner h2 {
+    font-size: 34px;
+  }
+  .footer-inner {
+    flex-wrap: wrap;
+    padding-block: 8px;
+    gap: 15px;
+  }
+  .site-footer p {
+    display: none;
+  }
+  .event-hero-grid {
+    flex-direction: column;
+    gap: 25px;
+  }
+  .event-hero-action {
+    padding: 0;
+    max-width: none;
+  }
+  .gallery-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+  .gallery-filters {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .search-input {
+    flex-basis: 100%;
+  }
+  .gallery-filters > label:not(.search-input) {
+    flex: 1;
+  }
+  .gallery-heading h2 {
+    font-size: 27px;
+  }
+  .project-grid {
+    gap: 18px;
+  }
+  .project-card-body {
+    padding: 17px;
+  }
+  .project-links {
+    gap: 10px;
+  }
+  .project-detail-body {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+  .project-detail-body .panel {
+    max-width: none;
+  }
+  .portal-intro {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .deadline-panel {
+    padding: 23px;
+  }
+  .portal-columns {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .portal-header h1 {
+    font-size: 31px;
+  }
+  .tabs {
+    gap: 25px;
+  }
+  .tab {
+    font-size: 12px;
+  }
+  .portal-content {
+    padding-block: 30px 50px;
+  }
+  .submission-layout {
+    grid-template-columns: 1fr;
+    gap: 25px;
+  }
+  .submission-aside {
+    order: -1;
+  }
+  .submission-aside .panel {
+    padding: 20px;
+  }
+  .submission-aside .checklist,
+  .submission-aside .aside-icon {
+    display: none;
+  }
+  .credit-grid {
+    gap: 18px;
+  }
+  .credit-card {
+    padding: 20px;
+  }
+  .credit-card-top {
+    gap: 10px;
+  }
+  .meeting-banner {
+    flex-direction: column;
+    align-items: start;
+    padding: 20px;
+    gap: 17px;
+  }
+  .past-event {
+    gap: 15px;
+  }
+  .past-project-count {
+    display: none;
+  }
+  .past-event-icon {
+    height: 48px;
+    width: 48px;
+  }
+  .past-event p {
+    display: none;
+  }
+  .page-heading {
+    align-items: start;
+  }
+  .panel {
+    padding: 22px;
+  }
+  .auth-page {
+    padding-inline: 20px;
+    min-height: 650px;
+  }
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  .site-header .community-logo {
+    width: 160px;
+  }
+  .site-header .account-avatar {
+    display: none;
+  }
+  .main-nav > .nav-link:first-child {
+    display: inline-flex;
+  }
+  .main-nav {
+    gap: 12px;
+  }
+  .brand {
+    gap: 8px;
+  }
+  .brand-community {
+    font-size: 11px;
+  }
+  .brand-word {
+    font-size: 27px;
+  }
+  .header-inner {
+    gap: 12px;
+  }
+  .hero-copy h1 {
+    font-size: 54px;
+  }
+  .hero-description {
+    font-size: 14px;
+  }
+  .hero-actions {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .hero-actions .button {
+    font-size: 12px;
+    padding: 11px 15px;
+  }
+  .builder-scene {
+    height: 340px;
+  }
+  .window-toolbar p {
+    margin-left: 20px;
+    font-size: 9px;
+  }
+  .code-lines {
+    font-size: 10px;
+    padding-inline: 12px;
+  }
+  .code-lines i {
+    width: 23px;
+  }
+  .project-mini {
+    left: 10px;
+    padding: 15px;
+    gap: 10px;
+  }
+  .project-mini strong {
+    font-size: 11px;
+  }
+  .project-mini small,
+  .project-mini div > span {
+    font-size: 9px;
+  }
+  .mini-icon {
+    width: 36px;
+    height: 36px;
+  }
+  .scene-tag {
+    bottom: -40px;
+  }
+  .event-grid,
+  .project-grid,
+  .credit-grid {
+    grid-template-columns: 1fr;
+  }
+  .event-art {
+    height: 190px;
+  }
+  .event-art-shape {
+    right: 15%;
+  }
+  .event-card-content {
+    padding: 23px;
+  }
+  .project-card-body {
+    padding: 23px;
+  }
+  .project-description {
+    font-size: 13px;
+  }
+  .project-links {
+    gap: 18px;
+    font-size: 11px;
+  }
+  .project-links .text-button {
+    font-size: 11px;
+  }
+  .portal-header .badge {
+    display: none;
+  }
+  .tabs {
+    gap: 20px;
+  }
+  .tab {
+    font-size: 11px;
+    gap: 6px;
+  }
+  .tab svg {
+    width: 14px;
+  }
+  .credit-card {
+    padding: 25px;
+  }
+  .form-grid-2 {
+    grid-template-columns: 1fr;
+  }
+  .form-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+  .section-heading {
+    align-items: start;
+  }
+  .section-heading h2 {
+    font-size: 27px;
+  }
+  .past-event .badge {
+    display: none;
+  }
+  .past-event h3 {
+    font-size: 16px;
+  }
+  .project-detail-heading {
+    align-items: start;
+  }
+  .auth-card {
+    padding: 27px;
+  }
+}

@@ -1,0 +1,78 @@
+.button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid transparent;
+  padding: 11px 20px;
+  border-radius: 7px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  transition:
+    background 0.16s,
+    box-shadow 0.16s,
+    transform 0.16s;
+  white-space: normal;
+}
+.button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+.button-primary {
+  color: white;
+  background: var(--purple);
+  box-shadow: 0 2px 4px #635bff20;
+}
+.button-primary:hover:not(:disabled) {
+  background: #5148e5;
+  box-shadow: 0 4px 12px #635bff25;
+}
+.button-secondary {
+  background: white;
+  border-color: #dce3eb;
+  color: #29435e;
+}
+.button-secondary:hover:not(:disabled) {
+  border-color: #bcb6ff;
+  background: #faf9ff;
+}
+.button-small {
+  font-size: 12px;
+  padding: 9px 14px;
+  border-radius: 6px;
+}
+.button-quiet {
+  background: transparent;
+  padding-inline: 12px;
+}
+.button-light {
+  background: white;
+  color: var(--navy);
+}
+.button-danger {
+  color: #ae2638;
+  background: #fff3f5;
+  border-color: #f5cad1;
+}
+.button-voted {
+  background: #edebff;
+  color: #5147da;
+  border-color: #d0caff;
+}
+.text-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--purple);
+  background: transparent;
+  border: 0;
+  font-size: 13px;
+  font-weight: 550;
+  padding: 4px 0;
+}
+.text-button:hover {
+  color: #4338ca;
+}
+.danger-text {
+  color: #b23548;
+}

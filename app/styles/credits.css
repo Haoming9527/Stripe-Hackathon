@@ -1,0 +1,82 @@
+.credit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+.credit-card {
+  border: 1px solid #e1e6ef;
+  border-radius: 11px;
+  background: #fff;
+  padding: 25px;
+  display: flex;
+  flex-direction: column;
+}
+.credit-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 25px;
+}
+.credit-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  background: #f1efff;
+  color: #897cc8;
+  border-radius: 9px;
+}
+.credit-card .eyebrow {
+  font-size: 10px;
+  margin-bottom: 8px;
+}
+.credit-card h3 {
+  font-size: 23px;
+}
+.credit-value {
+  font-size: 16px;
+  color: #7769b7;
+  margin-top: 13px;
+  font-weight: 550;
+}
+.credit-description {
+  color: #8b98a9;
+  font-size: 12px;
+  line-height: 1.85;
+  margin-top: 12px;
+}
+.credit-expiry {
+  display: flex;
+  gap: 6px;
+  align-items: start;
+  font-size: 10px;
+  color: #a19ab4;
+  margin: 20px 0 10px;
+}
+.credit-expiry svg {
+  margin-top: 2px;
+}
+.credit-card-bottom {
+  margin-top: auto;
+  padding-top: 26px;
+}
+.credit-card-bottom .button {
+  width: 100%;
+}
+.credit-code {
+  padding: 13px;
+  background: #f5f7fb;
+  border-radius: 7px;
+  margin-bottom: 17px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.credit-code code {
+  font: 11px/1.8 var(--font-brand-mono);
+  overflow-wrap: anywhere;
+}
+.credit-code .text-button {
+  font-size: 10px;
+}

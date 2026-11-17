@@ -1,0 +1,65 @@
+import "server-only";
+import Link from "next/link";
+import { ArrowLeft, CalendarDays, Code2, Gift, Users } from "lucide-react";
+import type { PortalData } from "./data";
+
+export function PortalHeader({
+  event,
+  viewer,
+  tab,
+  hasInvitations,
+}: Pick<PortalData, "event" | "viewer" | "tab"> & { hasInvitations: boolean }) {
+  const slug = event.slug;
+  const base = `/hackathons/${slug}/portal`;
+  const isDraftPreview = viewer.isAdmin && event.status === "DRAFT";
+  return (
+    <section className="portal-header">
+      <div className="shell">
+        <Link
+          href={isDraftPreview ? `/admin/${event.id}` : `/hackathons/${slug}`}
+          className="back-link"
+        >
+          <ArrowLeft size={15} />
+          {isDraftPreview ? "Back to admin" : event.title}
+        </Link>
+        <div className="page-heading">
+          <div>
+            <p className="eyebrow">Your participant portal</p>
+            <h1>Let’s build, {viewer.name?.split(" ")[0] || "builder"}.</h1>
+            <p className="muted">{viewer.email}</p>
+          </div>
+          <span
+            className={`badge ${event.status === "ACTIVE" ? "badge-active" : "badge-ended"}`}
+          >
+            {event.status === "ACTIVE"
+              ? "Hackathon active"
+              : event.status === "DRAFT"
+                ? "Draft preview"
+                : "Hackathon ended"}
+          </span>
+        </div>
+        <nav className="tabs" aria-label="Participant portal">
+          {[
+            { id: "overview", label: "Overview", icon: CalendarDays },
+            { id: "team", label: "Your team", icon: Users },
+            { id: "submission", label: "Your project", icon: Code2 },
+            { id: "credits", label: "Credits", icon: Gift },
+          ].map((item) => (
+            <Link
+              href={`${base}?tab=${item.id}`}
+              key={item.id}
+              className={`tab ${tab === item.id ? "tab-active" : ""}`}
+              aria-current={tab === item.id ? "page" : undefined}
+            >
+              <item.icon size={16} />
+              {item.label}
+              {item.id === "team" && hasInvitations && (
+                <span className="notification-dot" />
+              )}
+            </Link>
+          ))}
+        </nav>
+      </div>
+    </section>
+  );
+}
