@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { SINGAPORE_COMMUNITY_URL } from "@/lib/community";
 
@@ -22,7 +23,7 @@ export function SiteNavigation({ isAdmin }: { isAdmin: boolean }) {
         className="nav-link"
         aria-label="Singapore community"
       >
-        Community
+        Community <ArrowUpRight aria-hidden="true" size={13} />
       </a>
       {isAdmin && (
         <Link

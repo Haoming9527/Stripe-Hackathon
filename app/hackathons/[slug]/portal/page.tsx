@@ -27,7 +27,7 @@ export default async function PortalPage({
           <span className="empty-icon">
             <LockKeyhole size={26} />
           </span>
-          <h1>Your invitation opens the door.</h1>
+          <h1>Participant access required</h1>
           <p>
             You’re signed in as <strong>{viewer.email}</strong>.<br />
             This email isn’t on the participant list for {event.title}.<br />

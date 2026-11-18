@@ -3,7 +3,6 @@ import Link from "next/link";
 import { ArrowRight, ArrowUpRight, Check, Code2 } from "lucide-react";
 import { eventDate } from "@/lib/presentation";
 import { ActionForm } from "@/components/ActionForm";
-import { CopyButton } from "@/components/CopyButton";
 import type { PortalData } from "./data";
 
 export function SubmissionTab({
@@ -20,10 +19,9 @@ export function SubmissionTab({
     <>
       <div className="section-heading">
         <div>
-          <p className="eyebrow">From idea to impact</p>
-          <h2>Your next great project.</h2>
+          <h2>Project submission</h2>
           <p className="muted">
-            Tell the community what you built and why it matters.
+            Save a private draft or publish your team’s project to the gallery.
           </p>
         </div>
         {project && (
@@ -38,25 +36,10 @@ export function SubmissionTab({
           </span>
         )}
       </div>
-      {project?.status === "SUBMITTED" && (
-        <div className="notice notice-success stack">
-          <strong>Share your project</strong>
-          <span>Anyone with this link can view your published project.</span>
-          <div className="inline">
-            <Link href={`/hackathons/${event.slug}/projects/${project.id}`}>
-              View public project
-            </Link>
-            <CopyButton
-              value={`/hackathons/${event.slug}/projects/${project.id}`}
-              share
-            />
-          </div>
-        </div>
-      )}
       {!team ? (
         <div className="empty-state">
           <Code2 size={32} />
-          <h3>Every project starts with a team.</h3>
+          <h3>Join or create a team</h3>
           <p>Create a solo team or accept an invitation before submitting.</p>
           <Link href={`${base}?tab=team`} className="button button-primary">
             Open your team <ArrowRight size={16} />
@@ -81,7 +64,6 @@ export function SubmissionTab({
                     defaultValue={project?.name}
                     maxLength={150}
                     required
-                    placeholder="Give your idea a name"
                   />
                 </label>
                 <label className="field">
@@ -198,14 +180,7 @@ export function SubmissionTab({
           </div>
           <aside className="submission-aside">
             <div className="panel stack">
-              <span className="aside-icon">
-                <Check size={22} />
-              </span>
-              <h3>Ready for the spotlight?</h3>
-              <p>
-                A clear description, a short demo video, and your repository
-                help everyone understand your work.
-              </p>
+              <h3>Before you submit</h3>
               <ul className="checklist">
                 <li>
                   <Check size={15} /> One project for {team.name}

@@ -15,14 +15,11 @@ export function CreditsTab({
     <>
       <div className="section-heading">
         <div>
-          <p className="eyebrow">A little fuel for your ideas</p>
-          <h2>Your builder toolkit.</h2>
+          <h2>Sponsor credits</h2>
           <p className="muted">
-            Credits and offers selected for this hackathon. Each code belongs to
-            you.
+            Claim your assigned offers and redeem them with each sponsor.
           </p>
         </div>
-        <Gift className="section-illustration" size={42} strokeWidth={1.3} />
       </div>
       {offers.length ? (
         <div className="credit-grid">
@@ -58,8 +55,8 @@ export function CreditsTab({
                           : "Not assigned yet"}
                   </span>
                 </div>
-                <p className="eyebrow">{offer.sponsor || "Builder credits"}</p>
                 <h3>{offer.name}</h3>
+                {offer.sponsor && <p className="credit-sponsor">{offer.sponsor}</p>}
                 {offer.valueLabel && (
                   <p className="credit-value">{offer.valueLabel}</p>
                 )}
@@ -129,7 +126,7 @@ export function CreditsTab({
           <span className="empty-icon">
             <Gift size={28} />
           </span>
-          <h3>Your toolkit is on its way.</h3>
+          <h3>No sponsor offers yet</h3>
           <p>Offers will appear here when your organizer adds them.</p>
         </div>
       )}

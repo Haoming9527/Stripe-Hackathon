@@ -84,6 +84,9 @@
 .skip-link:focus {
   top: 10px;
 }
+.skip-link:not(:focus) {
+  clip-path: inset(50%);
+}
 .sr-only {
   position: absolute;
   width: 1px;
@@ -113,6 +116,10 @@
   height: 18px;
   margin-bottom: 40px;
 }
-.skeleton-card {
-  height: 320px;
+.skeleton-list {
+  display: grid;
+  gap: 10px;
+}
+.skeleton-row {
+  height: 64px;
 }

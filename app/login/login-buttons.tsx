@@ -51,16 +51,16 @@ export function LoginButtons({
     <div className="login-options">
       <button
         type="button"
-        className="button button-secondary login-provider"
+        className="entry-primary google-sign-in"
         onClick={continueWithGoogle}
         disabled={pending || !googleEnabled}
       >
         <GoogleMark />
-        {pending ? "Opening Google..." : "Continue with Google"}
+        {pending ? "Opening Google…" : "Sign in with Google"}
       </button>
 
       {error && (
-        <p className="notice notice-error" role="alert">
+        <p className="entry-message notice-error" role="alert">
           {error}
         </p>
       )}

@@ -55,7 +55,6 @@ export default async function AdminEventPage({
       </Link>
       <div className={styles.topline}>
         <div>
-          <span className={styles.kicker}>Your community, in motion</span>
           <h1>{event.title}</h1>
           <p>
             {event.location || "Community hackathon"} ·{" "}

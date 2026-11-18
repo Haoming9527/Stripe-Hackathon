@@ -21,7 +21,7 @@ export function SiteFrame({
       <main id="main" className={isLanding ? "landing-main" : undefined}>
         {children}
       </main>
-      {!isLanding && footer}
+      {footer}
     </>
   );
 }

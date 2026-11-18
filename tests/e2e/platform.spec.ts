@@ -1,5 +1,10 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { authenticate, eventId, eventSlug, existingProjectId, privateBriefing, privateCredit } from "./fixtures";
+
+async function captureFullPage(page: Page, path: string) {
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+  await page.screenshot({ path, fullPage: true });
+}
 
 test("guests browse galleries without private data and mobile pages stay within the viewport", async ({ page, request }) => {
   const entryResponse = await page.goto("/");
@@ -10,22 +15,40 @@ test("guests browse galleries without private data and mobile pages stay within 
   await expect(page.getByRole("heading", { level: 1, name: "Community browser test" })).toBeVisible();
   await expect(page.getByRole("banner")).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Singapore community" })).toHaveAttribute("href", "https://www.stripecommunity.com/public/clubs/singapore-r40ia");
-  await expect(page.getByRole("contentinfo")).toHaveCount(0);
+  const footer = page.getByRole("contentinfo");
+  const docsLink = footer.getByRole("link", { name: "Developer resources" });
+  await expect(docsLink).toHaveAttribute("href", "https://docs.stripe.com/");
+  await expect(footer).toHaveCSS("border-top-width", "0px");
+  expect(await docsLink.evaluate(link => document.documentElement.clientWidth - link.getBoundingClientRect().right)).toBeLessThanOrEqual(20);
+  expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1)).toBe(true);
   const galleryLink = page.getByRole("link", { name: "Browse the public galleries", exact: true });
   await expect(galleryLink).toHaveAttribute("href", "/hackathons");
-  await expect(page.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign in with Google", exact: true })).toBeVisible();
+  const navbar = page.getByRole("banner").locator(".header-inner");
+  const signIn = navbar.getByRole("link", { name: "Sign in", exact: true });
+  await page.mouse.move(5, 180);
+  await expect(navbar).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await signIn.hover();
+  await expect(navbar).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(signIn).toHaveCSS("border-top-color", "rgb(99, 91, 255)");
+  await signIn.focus();
+  await page.mouse.move(5, 180);
+  await expect(navbar).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(signIn).toHaveCSS("border-top-color", "rgba(0, 0, 0, 0)");
+  await signIn.blur();
   await expect(page.getByRole("button", { name: "Continue with Stripe", exact: true })).toHaveCount(0);
   const providers = await request.get("/api/auth/providers");
   expect(Object.keys(await providers.json())).toEqual(["google"]);
-  await page.screenshot({ path: "artifacts/home-desktop.png", fullPage: true });
+  await captureFullPage(page, "artifacts/home-desktop.png");
   await galleryLink.click();
   await expect(page).toHaveURL("/hackathons");
   await page.getByRole("link", { name: /Community browser test/ }).click();
   await expect(page).toHaveURL(`/hackathons/${eventSlug}`);
   await expect(page.getByRole("heading", { level: 1, name: "Community browser test" })).toBeVisible();
   await expect(page.getByRole("banner")).toBeVisible();
-  await expect(page.getByRole("banner")).toHaveCSS("position", "sticky");
-  await expect(page.getByRole("banner")).toHaveCSS("top", "12px");
+  await page.evaluate(() => window.scrollTo({ top: 250, behavior: "instant" }));
+  await expect(page.getByRole("banner")).not.toBeInViewport();
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
   await expect(page.getByRole("contentinfo")).toBeVisible();
   await expect(page.getByRole("contentinfo")).toHaveText("Developer resources");
   await expect(page.getByRole("link", { name: "Seeded public project", exact: true })).toBeVisible();
@@ -34,7 +57,7 @@ test("guests browse galleries without private data and mobile pages stay within 
   const response = await request.get(`/hackathons/${eventSlug}`);
   const html = await response.text();
   for (const value of [privateBriefing, privateCredit, "builder@example.com", "voteCount", '"votes":']) expect(html).not.toContain(value);
-  await page.screenshot({ path: "artifacts/gallery-desktop.png", fullPage: true });
+  await captureFullPage(page, "artifacts/gallery-desktop.png");
 
   await page.getByLabel("Search projects").fill("no-matching-project");
   await page.getByRole("button", { name: "Search", exact: true }).click();
@@ -51,8 +74,11 @@ test("guests browse galleries without private data and mobile pages stay within 
     await expect(page.getByRole("heading", { level: 1, name: expectedHeading })).toBeVisible();
     await expect(page.getByRole("status", { name: "Loading", exact: true })).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+    if (path === "/" || path === "/login") {
+      expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1)).toBe(true);
+    }
     const name = path === "/login" ? "login" : path === "/" ? "home" : path.includes("/projects/") ? "project" : "gallery";
-    await page.screenshot({ path: `artifacts/${name}-mobile.png`, fullPage: true });
+    await captureFullPage(page, `artifacts/${name}-mobile.png`);
   }
   await page.goto(`/hackathons/${eventSlug}/portal`);
   await expect(page).toHaveURL(/\/login\?callbackUrl=/);
@@ -134,23 +160,24 @@ test("participants form teams, invite teammates, save a private draft, and publi
   await expect(secondTab.getByLabel("Project name", { exact: false })).toHaveValue("Older draft title");
   await secondTab.close();
   await page.bringToFront();
-  const publicLink = page.getByRole("link", { name: "View public project", exact: true });
+  await expect(page.getByText("Share your project", { exact: true })).toHaveCount(0);
+  const publicLink = page.getByRole("link", { name: "View your project", exact: true });
   await expect(publicLink).toBeVisible();
   const projectHref = await publicLink.getAttribute("href");
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-  await page.getByRole("button", { name: "Copy project link", exact: true }).click();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(new URL(projectHref!, page.url()).href);
   const publicResponse = await page.request.get(projectHref!);
   expect(publicResponse.status()).toBe(200);
-  await page.screenshot({ path: "artifacts/portal-project-desktop.png", fullPage: true });
+  await captureFullPage(page, "artifacts/portal-project-desktop.png");
 
   await page.goto(`/hackathons/${eventSlug}/portal?tab=team`);
   await expect(page.getByText("Your roster is locked because your project has been published.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Send invitation", exact: true })).toHaveCount(0);
   await page.goto(`/hackathons/${eventSlug}`);
-  const ownProject = page.locator("article.project-card").filter({ has: page.getByRole("link", { name: "A project from the browser", exact: true }) });
+  const ownProject = page.getByRole("article").filter({ has: page.getByRole("link", { name: "A project from the browser", exact: true }) });
   await expect(ownProject).toContainText(/Your team.s project/);
   await expect(ownProject.getByRole("button", { name: "Vote for project" })).toHaveCount(0);
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await ownProject.getByRole("button", { name: "Copy project link", exact: true }).click();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(new URL(projectHref!, page.url()).href);
 });
 
 test("participants can reveal only their assigned credit", async ({ page, context, browser }) => {
@@ -162,10 +189,10 @@ test("participants can reveal only their assigned credit", async ({ page, contex
   await page.reload();
   await expect(page.locator("code").filter({ hasText: privateCredit })).toBeVisible();
   await expect(page.getByRole("button", { name: "Claim your credit", exact: true })).toHaveCount(0);
-  await page.screenshot({ path: "artifacts/portal-credits-desktop.png", fullPage: true });
+  await captureFullPage(page, "artifacts/portal-credits-desktop.png");
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
-  await page.screenshot({ path: "artifacts/portal-credits-mobile.png", fullPage: true });
+  await captureFullPage(page, "artifacts/portal-credits-mobile.png");
 
   const otherContext = await browser.newContext({ baseURL: process.env.E2E_BASE_URL });
   try {
@@ -181,7 +208,7 @@ test("signed-in visitors vote and undo within the same allowance without partici
   await authenticate(context, "VISITOR");
   await page.goto(`/hackathons/${eventSlug}`);
   await expect(page.getByText("1 of 1 votes remaining", { exact: true })).toBeVisible();
-  const project = page.locator("article.project-card").filter({ has: page.getByRole("link", { name: "Seeded public project", exact: true }) });
+  const project = page.getByRole("article").filter({ has: page.getByRole("link", { name: "Seeded public project", exact: true }) });
   const detail = await context.newPage();
   await detail.goto(`/hackathons/${eventSlug}/projects/${existingProjectId}`);
   const voteButton = detail.getByRole("button", { name: "Vote for project", exact: true });
@@ -198,7 +225,7 @@ test("signed-in visitors vote and undo within the same allowance without partici
   await expect(voteButton).toBeVisible();
   await detail.close();
   await page.goto(`/hackathons/${eventSlug}/portal`);
-  await expect(page.getByRole("heading", { name: "Your invitation opens the door." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Participant access required" })).toBeVisible();
   await expect(page.getByText(privateBriefing)).toHaveCount(0);
   const exported = await page.request.get(`/api/admin/export?hackathonId=${eventId}&type=votes`);
   expect(exported.status()).toBe(403);
@@ -213,7 +240,7 @@ test("admins create and edit events, preview imports, and allocate unique credit
   await expect(adminSidebar.getByRole("link")).toHaveCount(3);
   await expect(adminSidebar.getByRole("link", { name: "Community site" })).toHaveAttribute("href", "https://www.stripecommunity.com/public/clubs/singapore-r40ia");
   await expect(page.getByRole("link", { name: "Stripe Community Hackathons home", exact: true })).toHaveCSS("color", "rgb(10, 37, 64)");
-  await page.screenshot({ path: "artifacts/admin-desktop.png", fullPage: true });
+  await captureFullPage(page, "artifacts/admin-desktop.png");
   await page.goto("/admin/new");
   await page.getByLabel("Hackathon name", { exact: true }).fill("Browser-created hackathon");
   await page.getByLabel("Page URL", { exact: false }).fill("browser-created-hackathon");
@@ -287,7 +314,9 @@ test("admins create and edit events, preview imports, and allocate unique credit
   await chooser.setFiles({ name: "credits.csv", mimeType: "text/csv", buffer: Buffer.from("code\nBROWSER-CODE-ONE\nBROWSER-CODE-TWO") });
   await expect(offer.getByRole("status").filter({ hasText: "Loaded credits.csv" })).toBeVisible();
   await expect(offer.getByLabel("Unique codes or redemption links", { exact: false })).toHaveValue("code\nBROWSER-CODE-ONE\nBROWSER-CODE-TWO");
-  await offer.screenshot({ path: "artifacts/credit-import-desktop.png" });
+  await offer.screenshot({
+    path: "artifacts/credit-import-desktop.png",
+  });
   await offer.getByRole("button", { name: "Add to inventory", exact: true }).click();
   await expect(offer.getByRole("button", { name: "Assign 2 vouchers", exact: true })).toBeEnabled();
   await offer.getByRole("button", { name: "Assign 2 vouchers", exact: true }).click();
@@ -305,7 +334,7 @@ test("admins create and edit events, preview imports, and allocate unique credit
   await page.goto("/admin");
   await expect(page.getByRole("heading", { level: 1, name: "Hackathons" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
-  await page.screenshot({ path: "artifacts/admin-mobile.png", fullPage: true });
+  await captureFullPage(page, "artifacts/admin-mobile.png");
   await page.goto(`${eventPath}?tab=settings`);
   await page.getByLabel("Type browser-created-hackathon to confirm", { exact: true }).fill("browser-created-hackathon");
   await page.getByRole("button", { name: "Delete hackathon permanently" }).click();

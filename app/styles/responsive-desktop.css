@@ -3,52 +3,7 @@
     background-position: -200% 0;
   }
 }
-@media (min-width: 1400px) {
-  .shell {
-    max-width: 1270px;
-    padding-inline: 45px;
-  }
-  .hero-grid {
-    gap: 70px;
-  }
-}
 @media (max-width: 1024px) {
-  .shell {
-    padding-inline: 28px;
-  }
-  .hero-grid {
-    gap: 25px;
-  }
-  .hero-copy h1 {
-    font-size: 63px;
-  }
-  .hero-description {
-    font-size: 15px;
-  }
-  .project-mini {
-    left: 15px;
-    right: 0;
-    padding: 17px;
-  }
-  .mini-icon {
-    width: 40px;
-    height: 40px;
-  }
-  .project-mini strong {
-    font-size: 12px;
-  }
-  .builder-scene {
-    height: 360px;
-  }
-  .code-lines {
-    font-size: 11px;
-  }
-  .community-strip-inner > span {
-    display: none;
-  }
-  .project-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
   .credit-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -57,15 +12,5 @@
   }
   .portal-intro {
     gap: 35px;
-  }
-  .build-banner-inner {
-    gap: 65px;
-  }
-  .event-hero-grid {
-    align-items: start;
-  }
-  .event-hero-action {
-    max-width: 240px;
-    padding-top: 40px;
   }
 }

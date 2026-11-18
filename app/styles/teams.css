@@ -6,7 +6,7 @@
   align-items: center;
   gap: 12px;
   padding: 15px 0;
-  border-bottom: 1px solid #edf0f5;
+  border-bottom: 1px solid var(--border);
 }
 .member-row > div {
   flex: 1;
@@ -20,22 +20,22 @@
 }
 .member-row small {
   display: block;
-  font-size: 11px;
-  color: #98a3b1;
+  font-size: 12px;
+  color: var(--muted);
   overflow-wrap: anywhere;
 }
 .member-role {
   display: inline-block;
   margin-left: 8px;
-  color: #8f82b3;
+  color: var(--purple);
   background: #f1effa;
   border-radius: 3px;
   padding: 1px 5px;
-  font-size: 9px;
+  font-size: 12px;
 }
 .invitation-row {
   padding: 17px 0;
-  border-bottom: 1px solid #edf0f5;
+  border-bottom: 1px solid var(--border);
 }
 .invitation-row:last-child {
   border-bottom: 0;
@@ -48,19 +48,19 @@
 }
 .invitation-row small {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   margin: 5px 0;
 }
 .invitation-row form {
   margin-top: 12px;
 }
 .small-empty {
-  text-align: center;
-  padding: 25px 10px;
-  color: #a09bb7;
+  text-align: left;
+  padding: 12px 0;
+  color: var(--muted);
 }
 .small-empty > svg {
-  margin: 0 auto 14px;
+  margin-bottom: 12px;
 }
 .small-empty .muted {
   display: block;
@@ -69,24 +69,16 @@
 }
 .submission-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 290px;
+  grid-template-columns: minmax(0, 1fr) minmax(230px, 0.44fr);
   gap: 32px;
   align-items: start;
 }
 .submission-aside .panel {
-  background: #fafbfe;
+  background: var(--surface);
 }
 .submission-aside p {
   font-size: 12px;
-  color: #8a97aa;
-}
-.aside-icon {
-  background: #edeaff;
-  border-radius: 8px;
-  padding: 10px;
-  color: #8c7fd0;
-  display: inline-flex;
-  align-self: start;
+  color: var(--muted);
 }
 .checklist {
   list-style: none;
@@ -95,8 +87,8 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  font-size: 11px;
-  color: #7d8fa3;
+  font-size: 12px;
+  color: var(--muted);
 }
 .checklist li {
   display: flex;
@@ -104,7 +96,7 @@
   gap: 8px;
 }
 .checklist svg {
-  color: #a39bc4;
+  color: var(--purple);
 }
 .track-picker {
   border: 0;
@@ -113,16 +105,17 @@
 .track-picker legend {
   font-size: 12px;
   font-weight: 550;
-  color: #51677f;
+  color: var(--navy);
 }
 .track-picker .field-hint {
   margin-bottom: 12px;
 }
 .check-option {
+  cursor: pointer;
   display: flex;
   align-items: start;
   gap: 10px;
-  border: 1px solid #e3e8ef;
+  border: 1px solid var(--border);
   border-radius: 7px;
   padding: 12px;
   margin-top: 8px;
@@ -137,16 +130,24 @@
 }
 .check-option small {
   display: block;
-  font-size: 11px;
-  color: #99a1b1;
+  font-size: 12px;
+  color: var(--muted);
 }
 .consent-option {
   display: flex;
   align-items: start;
   gap: 11px;
   font-size: 12px;
-  color: #7a8a9d;
+  color: var(--muted);
   padding: 16px;
-  border-radius: 7px;
-  background: #f8f9fc;
+  border-radius: 4px;
+  background: var(--surface);
+}
+@media (max-width: 760px) {
+  .submission-layout .submission-aside {
+    order: 0;
+  }
+  .submission-layout .submission-aside .checklist {
+    display: flex;
+  }
 }

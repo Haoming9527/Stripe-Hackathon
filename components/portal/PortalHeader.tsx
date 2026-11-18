@@ -20,13 +20,12 @@ export function PortalHeader({
           className="back-link"
         >
           <ArrowLeft size={15} />
-          {isDraftPreview ? "Back to admin" : event.title}
+          {isDraftPreview ? "Back to admin" : "Event gallery"}
         </Link>
         <div className="page-heading">
           <div>
-            <p className="eyebrow">Your participant portal</p>
-            <h1>Let’s build, {viewer.name?.split(" ")[0] || "builder"}.</h1>
-            <p className="muted">{viewer.email}</p>
+            <h1>{event.title}</h1>
+            <p className="muted">Participant portal · {viewer.email}</p>
           </div>
           <span
             className={`badge ${event.status === "ACTIVE" ? "badge-active" : "badge-ended"}`}
@@ -54,7 +53,7 @@ export function PortalHeader({
               <item.icon size={16} />
               {item.label}
               {item.id === "team" && hasInvitations && (
-                <span className="notification-dot" />
+                <span className="notification-dot" role="img" aria-label="Pending invitations" />
               )}
             </Link>
           ))}

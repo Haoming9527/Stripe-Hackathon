@@ -18,14 +18,13 @@ export default async function AdminLayout({
           className="panel"
           style={{ maxWidth: 580, marginInline: "auto", padding: "2.5rem" }}
         >
-          <span className="eyebrow">Administrator access</span>
-          <h1>This space is for event organizers.</h1>
+          <h1>Organizer access required</h1>
           <p className="muted">
             Your account doesn’t have access to the admin dashboard. You can
             still explore the community’s projects and visit your participant
             portal.
           </p>
-          <Link className="button button-primary" href="/">
+          <Link className="button button-primary" href="/hackathons">
             Explore hackathons
           </Link>
         </div>

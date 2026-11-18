@@ -1,16 +1,21 @@
 .portal-header {
-  background: #f8fafc;
   border-bottom: 1px solid var(--border);
-  padding-top: 28px;
+  background: var(--surface);
+  padding-top: 32px;
 }
 .portal-header h1 {
-  font-size: 39px;
+  color: var(--navy);
+  font-size: clamp(32px, 4vw, 54px);
+  font-weight: 550;
+  letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
 }
 .portal-header .page-heading {
-  margin-bottom: 24px;
+  margin-block: 18px 26px;
 }
-.portal-header .eyebrow {
-  margin-bottom: 10px;
+.portal-header .page-heading .muted {
+  margin-top: 10px;
+  overflow-wrap: anywhere;
 }
 .tabs {
   display: flex;
@@ -18,131 +23,141 @@
   overflow-x: auto;
   scrollbar-width: thin;
 }
-.tab {
+.portal-header .tab {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 17px 0;
+  padding: 14px 0;
   border-bottom: 2px solid transparent;
-  font-size: 13px;
-  color: #8a97a8;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
   white-space: nowrap;
 }
-.tab-active {
+.portal-header .tab:hover {
+  color: var(--navy);
+}
+.portal-header .tab:focus-visible {
+  outline-offset: -3px;
+}
+.portal-header .tab-active {
   color: var(--purple);
-  border-color: var(--purple);
-  font-weight: 550;
+  border-color: currentColor;
 }
 .notification-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #635bff;
+  background: var(--purple);
 }
 .portal-content {
-  padding-block: 43px 80px;
+  padding-block: 48px 88px;
   min-height: 500px;
+  overflow-wrap: anywhere;
 }
 .portal-intro {
   display: grid;
-  grid-template-columns: 1fr 290px;
-  gap: 70px;
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 0.48fr);
+  gap: clamp(28px, 6vw, 88px);
   align-items: start;
 }
 .portal-intro .prose {
-  margin-block: 18px 22px;
+  max-width: 68ch;
+  margin-block: 14px 20px;
+  color: var(--muted);
+}
+.portal-intro .event-meta {
+  margin-top: 18px;
 }
 .deadline-panel {
-  border: 1px solid #e7e3ff;
-  background: #f8f7ff;
-  border-radius: 10px;
-  padding: 25px;
+  padding: 22px 24px 24px;
+  background: #eeecff;
+  color: var(--navy);
+  border-radius: 4px;
 }
 .deadline-panel > svg {
-  color: #8d83d7;
-  margin-bottom: 15px;
-}
-.deadline-panel p {
-  font-size: 12px;
-  color: #8f88aa;
-  margin-block: 13px 20px;
+  color: var(--purple);
+  margin-bottom: 18px;
 }
 .deadline-panel h3 {
-  font-size: 22px;
+  font-size: 23px;
+}
+.deadline-panel p {
+  font-size: 14px;
+  margin-block: 8px 22px;
+  color: #4d496e;
 }
 .meeting-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 25px;
-  padding: 22px 25px;
-  border: 1px solid #e3e8f0;
-  border-radius: 9px;
-  margin-top: 35px;
-  background: #fbfcfe;
+  gap: 20px;
+  padding-block: 18px;
+  border-block: 1px solid var(--border);
+  margin-top: 36px;
 }
 .meeting-banner strong {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 550;
-}
-.meeting-banner small {
-  display: block;
-  color: #8c99aa;
-  font-size: 12px;
-  margin-top: 4px;
 }
 .portal-columns {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 45px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(32px, 6vw, 80px);
   align-items: start;
 }
 .portal-intro ~ .portal-columns {
-  margin-top: 45px;
+  margin-top: 44px;
 }
 .subsection-title {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 22px;
-  font-size: 18px;
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+  margin-bottom: 14px;
+  font-size: 22px;
 }
-.subsection-title svg {
-  color: #8c87b9;
+.subsection-title svg,
+.resource-list a svg {
+  color: var(--purple);
 }
 .schedule-list > div {
   display: flex;
-  gap: 24px;
-  padding: 16px 0;
-  border-bottom: 1px solid #edf0f4;
-  font-size: 13px;
+  gap: 18px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
 }
 .schedule-list time {
-  color: #8c99aa;
-  width: 80px;
+  color: var(--muted);
+  font: 13px/1.65 var(--font-brand-mono);
+  width: 86px;
   flex-shrink: 0;
 }
-.schedule-list strong {
-  font-weight: 500;
+.schedule-list strong,
+.prize-list strong {
+  font-weight: 550;
 }
-.schedule-list small {
+.schedule-list small,
+.resource-list small,
+.prize-list p {
   display: block;
-  color: #8e9bab;
-  font-size: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 4px;
 }
 .attendee-info {
-  margin-top: 35px;
-  padding: 24px;
-  background: #f7f9fc;
-  border-radius: 9px;
+  margin-top: 30px;
+  padding: 22px;
+  background: var(--surface);
 }
 .attendee-info h3 {
   font-size: 17px;
-  margin-bottom: 13px;
+  margin-bottom: 10px;
 }
 .attendee-info p {
-  font-size: 12px;
-  color: #7f8d9f;
+  font-size: 14px;
+  color: var(--muted);
 }
 .resource-list a {
   display: flex;
@@ -150,31 +165,34 @@
   justify-content: space-between;
   gap: 16px;
   padding: 14px 0;
-  border-bottom: 1px solid #edf0f4;
-  color: #596f88;
-  font-size: 13px;
-}
-.resource-list small {
-  display: block;
-  font-size: 11px;
-  color: #99a3b1;
+  border-bottom: 1px solid var(--border);
+  color: var(--navy);
 }
 .resource-list a:hover {
   color: var(--purple);
 }
 .prizes-heading {
-  margin-top: 37px;
+  margin-top: 34px;
 }
 .prize-list > div {
-  border-bottom: 1px solid #edf0f4;
-  padding: 15px 0;
+  border-bottom: 1px solid var(--border);
+  padding: 14px 0;
 }
-.prize-list strong {
-  font-size: 13px;
-  font-weight: 550;
-}
-.prize-list p {
-  font-size: 12px;
-  color: #8c99aa;
-  margin-top: 5px;
+@media (max-width: 480px) {
+  .portal-header .page-heading {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .portal-header .page-heading .badge {
+    display: inline-flex;
+  }
+  .portal-header .tabs {
+    gap: 18px;
+  }
+  .portal-header .tab {
+    font-size: 13px;
+  }
+  .portal-header .tab > svg {
+    display: none;
+  }
 }

@@ -9,15 +9,6 @@ const nextConfig: NextConfig = {
   experimental: {
     agentFeedback: true,
   },
-  turbopack: {
-    rules: {
-      "*.css": {
-        condition: { not: { path: /\.module\.css$/ } },
-        loaders: ["@tailwindcss/turbopack"],
-        as: "*.css",
-      },
-    },
-  },
 };
 
 export default nextConfig;

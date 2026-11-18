@@ -1,14 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  ArrowLeft,
-  ArrowRight,
-  CalendarDays,
-  Heart,
-  MapPin,
-  Search,
-  Shapes,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Search } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getViewer } from "@/lib/auth";
 import {
@@ -119,41 +111,45 @@ export default async function GalleryPage({
   }
   return (
     <>
-      <section className="event-hero">
+      <section className="gallery-masthead">
         <div className="shell">
           <Link href="/hackathons" className="back-link">
             <ArrowLeft size={15} /> All hackathons
           </Link>
-          <div className="event-hero-grid">
-            <div>
-              <span
-                className={`badge ${event.status === "ACTIVE" ? "badge-active" : "badge-ended"}`}
-              >
-                {event.status === "ACTIVE" ? "Active hackathon" : "Ended"}
-              </span>
+          <div className="gallery-intro">
+            <div className="gallery-intro-title">
               <h1>{event.title}</h1>
-              <p className="lead">
-                {event.tagline ||
-                  "Explore what the community has been building."}
-              </p>
-              <div className="event-meta">
-                <span>
-                  <CalendarDays size={16} />
-                  {eventDate(event.startsAt, event.timezone)}
-                </span>
-                <span>
-                  <MapPin size={16} />
-                  {event.location || "Online"}
-                </span>
-              </div>
+              {event.tagline && <p>{event.tagline}</p>}
             </div>
-            <div className="event-hero-action">
+            <div className="gallery-event-info">
+              <dl>
+                <div>
+                  <dt>Status</dt>
+                  <dd
+                    className={`gallery-status ${event.status === "ACTIVE" ? "is-active" : ""}`}
+                  >
+                    {event.status === "ACTIVE" ? "Active" : "Ended"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Starts</dt>
+                  <dd>
+                    <time dateTime={event.startsAt.toISOString()}>
+                      {eventDate(event.startsAt, event.timezone)}
+                    </time>
+                  </dd>
+                </div>
+                <div>
+                  <dt>Location</dt>
+                  <dd>{event.location || "Online"}</dd>
+                </div>
+              </dl>
               {participant || viewer?.isAdmin ? (
                 <Link
                   href={`/hackathons/${slug}/portal`}
                   className="button button-primary"
                 >
-                  Your participant portal <ArrowRight size={16} />
+                  Open participant portal <ArrowRight size={16} />
                 </Link>
               ) : !viewer ? (
                 <Link
@@ -171,33 +167,31 @@ export default async function GalleryPage({
           </div>
         </div>
       </section>
-      <section className="shell gallery-section">
-        <div className="gallery-heading">
-          <div>
-            <p className="eyebrow">Built by the community</p>
-            <h2>
-              The project gallery
-              <span className="count-pill">{event._count.projects}</span>
-            </h2>
-          </div>
+      <section className="shell gallery-index">
+        <div className="gallery-index-heading">
+          <h2>
+            Projects <span>({total})</span>
+          </h2>
           <div className="voting-summary">
-            <Heart size={17} />
-            <div>
-              <strong>
-                {votingOpen
-                  ? viewer
-                    ? `${remaining} of ${event.votesPerUser} votes remaining`
-                    : `${event.votesPerUser} votes for every builder and visitor`
-                  : "Voting is closed"}
-              </strong>
+            <strong>
+              {votingOpen
+                ? viewer
+                  ? `${remaining} of ${event.votesPerUser} votes remaining`
+                  : `${event.votesPerUser} ${event.votesPerUser === 1 ? "vote" : "votes"} per person`
+                : "Voting is closed"}
+            </strong>
+            {votingOpen && (
               <span>
-                {votingOpen
-                  ? `Until ${eventDate(event.votingClosesAt, event.timezone, true)}`
-                  : event.status === "ENDED" || now >= event.votingClosesAt
-                    ? "The projects live on. Keep exploring."
-                    : `Opens ${eventDate(event.votingOpensAt, event.timezone, true)}`}
+                Until {eventDate(event.votingClosesAt, event.timezone, true)}
               </span>
-            </div>
+            )}
+            {event.status === "ACTIVE" &&
+              !event.votingClosed &&
+              now < event.votingOpensAt && (
+                <span>
+                  Opens {eventDate(event.votingOpensAt, event.timezone, true)}
+                </span>
+              )}
           </div>
         </div>
         {votingOpen && unavailableVotes.length > 0 && (
@@ -222,14 +216,14 @@ export default async function GalleryPage({
             </div>
           </div>
         )}
-        <form className="gallery-filters" method="get">
-          <label className="search-input">
-            <Search size={18} />
+        <form className="gallery-search" method="get">
+          <label className="gallery-search-field">
+            <Search size={17} aria-hidden="true" />
             <span className="sr-only">Search projects</span>
             <input
               name="q"
               defaultValue={query}
-              placeholder="Search projects, ideas, or teams"
+              placeholder="Search projects or teams"
             />
           </label>
           {event.tracks.length > 0 && (
@@ -255,7 +249,7 @@ export default async function GalleryPage({
           )}
         </form>
         {projects.length ? (
-          <div className="project-grid">
+          <div className="gallery-card-grid">
             {projects.map((project) => (
               <ProjectCard
                 key={project.id}
@@ -272,19 +266,16 @@ export default async function GalleryPage({
             ))}
           </div>
         ) : (
-          <div className="empty-state">
-            <span className="empty-icon">
-              <Shapes size={28} />
-            </span>
+          <div className="gallery-empty">
             <h3>
               {query || track
                 ? "No projects match your search."
-                : "Great things are in the making."}
+                : "No published projects yet."}
             </h3>
             <p>
               {query || track
                 ? "Try another keyword or explore all tracks."
-                : "Projects appear here as soon as teams submit. Come back to see what they build."}
+                : "Projects appear here when teams publish their submissions."}
             </p>
             {(query || track) && (
               <Link

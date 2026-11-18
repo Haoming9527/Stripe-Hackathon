@@ -23,12 +23,10 @@ export function OverviewTab({
     <>
       <div className="portal-intro">
         <div>
-          <p className="eyebrow">Make the most of your time</p>
-          <h2>{event.title}</h2>
-          <p className="prose preserve-lines">
-            {event.description ||
-              "Welcome to the hackathon. Form your team, explore the resources, and start building."}
-          </p>
+          <h2>Event overview</h2>
+          {event.description && (
+            <p className="prose preserve-lines">{event.description}</p>
+          )}
           <div className="event-meta">
             <span>
               <CalendarDays size={16} />
@@ -44,21 +42,21 @@ export function OverviewTab({
           <Clock3 size={23} />
           <h3>
             {submissionsOpen
-              ? "Make it count."
-              : now < event.submissionOpensAt && event.status === "ACTIVE"
-                ? "Get ready to build."
-                : "Submissions are closed."}
+              ? "Submissions open"
+              : now < event.submissionOpensAt && event.status === "ACTIVE" && !event.submissionsClosed
+                ? "Upcoming submissions"
+                : "Submissions closed"}
           </h3>
           <p>
-            {now < event.submissionOpensAt
+            {now < event.submissionOpensAt && event.status === "ACTIVE" && !event.submissionsClosed
               ? `Opens ${eventDate(event.submissionOpensAt, event.timezone, true)}`
-              : `Submission deadline: ${eventDate(event.submissionClosesAt, event.timezone, true)}`}
+              : `Deadline · ${eventDate(event.submissionClosesAt, event.timezone, true)}`}
           </p>
           <Link
             href={`${base}?tab=${team ? "submission" : "team"}`}
             className="button button-primary"
           >
-            {team ? "Open your project" : "Meet your team"}
+            {team ? "Open your project" : "Open team page"}
             <ArrowRight size={16} />
           </Link>
         </div>
@@ -70,10 +68,7 @@ export function OverviewTab({
           target="_blank"
           rel="noopener noreferrer"
         >
-          <span>
-            <strong>Join the community live</strong>
-            <small>Presentations, questions, and everything in between.</small>
-          </span>
+          <strong>Event meeting</strong>
           <span className="button button-secondary">
             Join meeting <ArrowUpRight size={16} />
           </span>
@@ -82,7 +77,7 @@ export function OverviewTab({
       <div className="portal-columns">
         <div>
           <h3 className="subsection-title">
-            <CalendarDays size={18} /> The schedule
+            <CalendarDays size={18} /> Schedule
           </h3>
           {contentRows(event.schedule).length ? (
             <div className="schedule-list">
@@ -101,14 +96,14 @@ export function OverviewTab({
           )}
           {event.attendeeInfo && (
             <div className="attendee-info">
-              <h3>Good to know</h3>
+              <h3>Attendee information</h3>
               <p className="preserve-lines">{event.attendeeInfo}</p>
             </div>
           )}
         </div>
         <div>
           <h3 className="subsection-title">
-            <Code2 size={18} /> Your building blocks
+            <Code2 size={18} /> Resources
           </h3>
           {contentRows(event.resources).length ? (
             <div className="resource-list">
@@ -131,7 +126,7 @@ export function OverviewTab({
             <p className="muted">Resources will appear here when added.</p>
           )}
           <h3 className="subsection-title prizes-heading">
-            <Trophy size={18} /> Worth building for
+            <Trophy size={18} /> Prizes
           </h3>
           {contentRows(event.prizes).length ? (
             <div className="prize-list">

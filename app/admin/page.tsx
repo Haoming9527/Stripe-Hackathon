@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import styles from "@/components/admin/styles";
 import { requireAdmin } from "@/components/admin/access";
+import { Status } from "@/components/admin/event/Status";
 
 export const dynamic = "force-dynamic";
 
@@ -21,12 +22,9 @@ export default async function AdminHome() {
   return (
     <>
       <div className={styles.topline}>
-        <div>
-          <span className={styles.kicker}>Organizer workspace</span>
-          <h1>Hackathons</h1>
-        </div>
+        <h1>Hackathons</h1>
         <Link className="button button-primary" href="/admin/new">
-          ＋ Create hackathon
+          Create hackathon
         </Link>
       </div>
       <div className={styles.metrics}>
@@ -49,70 +47,51 @@ export default async function AdminHome() {
           <strong>{totals.projects}</strong>
         </div>
       </div>
-      <div className={styles.topline} style={{ marginBottom: 20 }}>
-        <div>
-          <h2 style={{ fontSize: 20, margin: 0 }}>Your hackathons</h2>
-        </div>
-      </div>
       {events.length ? (
-        <div className={styles.eventGrid}>
-          {events.map((event) => (
-            <article key={event.id} className={styles.eventCard}>
-              <div
-                className={`${styles.eventBand} ${event.status === "ENDED" ? styles.eventBandEnded : ""}`}
-              />
-              <div className={styles.eventCardBody}>
-                <div className={styles.eventMeta}>
-                  <span
-                    className={`${styles.badge} ${styles[event.status.toLowerCase() as "active" | "draft" | "ended"]}`}
-                  >
-                    {event.status === "ACTIVE"
-                      ? "Active"
-                      : event.status === "DRAFT"
-                        ? "Draft"
-                        : "Ended"}
-                  </span>
-                  <span>
+        <div className={styles.tableWrap}>
+          <table className={styles.table} aria-label="Your hackathons">
+            <thead>
+              <tr>
+                <th scope="col">Event</th>
+                <th scope="col">Start date</th>
+                <th scope="col">Status</th>
+                <th scope="col">Participants</th>
+                <th scope="col">Projects</th>
+              </tr>
+            </thead>
+            <tbody>
+              {events.map((event) => (
+                <tr key={event.id}>
+                  <td>
+                    <Link href={`/admin/${event.id}`} className={styles.textLink}>
+                      {event.title}
+                    </Link>
+                    {(event.tagline || event.location) && (
+                      <small>{event.tagline || event.location}</small>
+                    )}
+                  </td>
+                  <td>
                     {new Intl.DateTimeFormat("en", {
                       month: "short",
                       day: "numeric",
                       year: "numeric",
                       timeZone: event.timezone,
                     }).format(event.startsAt)}
-                  </span>
-                </div>
-                <h2>
-                  <Link href={`/admin/${event.id}`}>{event.title}</Link>
-                </h2>
-                <p>
-                  {event.tagline ||
-                    event.location ||
-                    "A new gathering for the community."}
-                </p>
-                <div className={styles.eventCardBottom}>
-                  <div className={styles.eventNumbers}>
-                    <span>
-                      <strong>{event._count.participants}</strong> participants
-                    </span>
-                    <span>
-                      <strong>{event._count.projects}</strong> projects
-                    </span>
-                  </div>
-                  <Link href={`/admin/${event.id}`} className={styles.textLink}>
-                    Manage →
-                  </Link>
-                </div>
-              </div>
-            </article>
-          ))}
+                  </td>
+                  <td>
+                    <Status status={event.status} />
+                  </td>
+                  <td>{event._count.participants}</td>
+                  <td>{event._count.projects}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       ) : (
         <div className={styles.empty}>
           <h2>No hackathons yet</h2>
-          <p>Create a hackathon to get started.</p>
-          <Link href="/admin/new" className="button button-primary">
-            Create hackathon
-          </Link>
+          <p>Created events will appear here.</p>
         </div>
       )}
     </>

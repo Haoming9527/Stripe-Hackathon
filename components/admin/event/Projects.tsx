@@ -16,6 +16,9 @@ export async function Projects({ event }: { event: Hackathon }) {
       _count: { select: { votes: true } },
     },
   });
+  const published = projects.filter((project) => project.status === "SUBMITTED").length;
+  const drafts = projects.filter((project) => project.status === "DRAFT").length;
+  const votes = projects.reduce((total, project) => total + project._count.votes, 0);
   return (
     <>
       <div className={styles.callout} style={{ marginBottom: 22 }}>
@@ -28,18 +31,8 @@ export async function Projects({ event }: { event: Hackathon }) {
           <div>
             <h2>Projects and voting results</h2>
             <p>
-              {
-                projects.filter((project) => project.status === "SUBMITTED")
-                  .length
-              }{" "}
-              published ·{" "}
-              {projects.filter((project) => project.status === "DRAFT").length}{" "}
-              drafts ·{" "}
-              {projects.reduce(
-                (total, project) => total + project._count.votes,
-                0,
-              )}{" "}
-              votes
+              {published} published · {drafts} {drafts === 1 ? "draft" : "drafts"} ·{" "}
+              {votes} {votes === 1 ? "vote" : "votes"}
             </p>
           </div>
           <a

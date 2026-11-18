@@ -21,7 +21,7 @@ export async function Participants({ event }: { event: Hackathon }) {
         <section className={styles.section}>
           <div className={styles.sectionHead}>
             <div>
-              <h2>Invite your builders</h2>
+              <h2>Import participants</h2>
               <p>Add the email addresses that can access this event.</p>
             </div>
           </div>

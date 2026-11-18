@@ -25,11 +25,10 @@ export function TeamTab({
     <>
       <div className="section-heading">
         <div>
-          <p className="eyebrow">Better together</p>
-          <h2>{team ? team.name : "Find your people."}</h2>
+          <h2>{team ? team.name : "Your team"}</h2>
           <p className="muted">
-            One team. One shared project. Up to {event.maxTeamSize}{" "}
-            {event.maxTeamSize === 1 ? "builder" : "builders"}.
+            Each team shares one project and can have up to {event.maxTeamSize}{" "}
+            {event.maxTeamSize === 1 ? "member" : "members"}.
           </p>
         </div>
         {team && (
@@ -41,7 +40,7 @@ export function TeamTab({
       {team ? (
         <div className="portal-columns">
           <div className="panel">
-            <h3>Your crew</h3>
+            <h3>Team members</h3>
             <div className="member-list">
               {team.members.map((member) => (
                 <div className="member-row" key={member.id}>
@@ -177,8 +176,7 @@ export function TeamTab({
           <div className="panel">
             <h3>Start a team</h3>
             <p className="muted">
-              Have a name in mind? Create your team and invite your
-              collaborators. Building solo is welcome, too.
+              Create a team to submit a project, even if you’re working solo.
             </p>
             <ActionForm intent="team.create" className="stack">
               <input type="hidden" name="hackathonId" value={event.id} />
@@ -188,7 +186,6 @@ export function TeamTab({
                   name="name"
                   required
                   maxLength={100}
-                  placeholder="A name for your next big idea"
                   disabled={!participant || !teamsOpen}
                 />
               </label>

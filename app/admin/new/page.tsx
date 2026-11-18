@@ -12,9 +12,7 @@ export default async function NewHackathonPage() {
       </Link>
       <div className={styles.topline}>
         <div>
-          <span className={styles.kicker}>A new beginning</span>
           <h1>Create a hackathon</h1>
-          <p>Bring Singapore’s Stripe community together to build.</p>
         </div>
       </div>
       <EventForm />

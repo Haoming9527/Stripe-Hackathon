@@ -150,7 +150,7 @@ export async function saveProject(
   });
   return {
     message: saved.firstPublish
-      ? "Your project is published in the gallery. Your team roster is now locked."
+      ? "Your project is published in the gallery."
       : saved.project.status === "DRAFT"
         ? "Draft saved."
         : "Project updated.",
