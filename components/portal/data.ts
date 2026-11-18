@@ -29,9 +29,10 @@ export async function loadPortal(slug: string, requestedTab?: string) {
         where: { id: participant.teamId },
         include: {
           members: {
-            where: { revokedAt: null },
+            where: { OR: [{ revokedAt: null }, { team: { ownerId: viewer.id } }] },
             include: { user: { select: { name: true } } },
           },
+          _count: { select: { members: true } },
           invitations: {
             where: { status: "PENDING" },
             include: { participant: { select: { normalizedEmail: true } } },

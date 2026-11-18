@@ -1,8 +1,9 @@
 import "server-only";
 import { Prisma, type Hackathon } from "@prisma/client";
 import { db } from "../db";
+import { findParticipant } from "../queries";
 import type { Viewer } from "../types";
-import { assert, DomainError, field, normalizeEmail } from "../validation";
+import { assert, DomainError, field } from "../validation";
 
 type Transaction = Prisma.TransactionClient;
 export type MutationResult = { message: string; redirectTo?: string };
@@ -54,25 +55,14 @@ export async function participant(
   hackathonId: string,
   viewer: Viewer,
 ) {
-  const record = await tx.participant.findUnique({
-    where: {
-      hackathonId_normalizedEmail: {
-        hackathonId,
-        normalizedEmail: normalizeEmail(viewer.email),
-      },
-    },
-  });
+  const record = await findParticipant(hackathonId, viewer.id, viewer.email, tx);
   assert(
-    record && !record.revokedAt,
+    record,
     "Your email is not registered for this hackathon.",
-  );
-  assert(
-    !record.userId || record.userId === viewer.id,
-    "This registration is linked to a different identity. Contact the organizer.",
   );
   if (!record.userId)
     return tx.participant.update({
-      where: { id: record.id },
+      where: { id: record.id, userId: null, revokedAt: null },
       data: { userId: viewer.id },
     });
   return record;

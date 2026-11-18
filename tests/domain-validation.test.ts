@@ -20,6 +20,12 @@ describe("participant imports", () => {
     expect(result.participants).toEqual([{ normalizedEmail: "valid@example.com", name: "Doe, Jane" }]);
   });
 
+  it("reports missing emails in nonempty CSV records and skips empty records", () => {
+    const result = parseParticipants("name,email\nOne,one@example.com\nTwo,\nThree\n,\n\n");
+    expect(result.participants).toEqual([{ normalizedEmail: "one@example.com", name: "One" }]);
+    expect(result.invalid).toEqual(["Missing email in CSV record 3", "Missing email in CSV record 4"]);
+  });
+
   it("does not canonicalize plus aliases or Gmail dots", () => {
     expect(normalizeEmail(" Foo.Bar+event@Gmail.com ")).toBe("foo.bar+event@gmail.com");
   });
@@ -73,6 +79,23 @@ describe("window boundaries", () => {
 describe("voucher imports", () => {
   it("reads unique codes or URLs from CSV without importing a header", () => {
     expect(parseVoucherValues("code\nABC123\nABC123\nhttps://sponsor.example/redeem/unique")).toEqual({ values: ["ABC123", "https://sponsor.example/redeem/unique"], duplicates: 1 });
+  });
+
+  it("keeps whole lines for headerless redemption URLs and codes", () => {
+    const first = "https://sponsor.example/redeem?codes=unique,value";
+    const second = "https://sponsor.example/redeem?codes=unique,second";
+    const rows = [first, second, "ABC,123", first];
+    expect(parseVoucherValues(rows.join("\r\n"))).toEqual({
+      values: [first, second, "ABC,123"],
+      duplicates: 1,
+    });
+  });
+
+  it("extracts the voucher column from headered CSV with quoted commas", () => {
+    expect(parseVoucherValues('sponsor,code\nAcme,"ABC,123"')).toEqual({
+      values: ["ABC,123"],
+      duplicates: 0,
+    });
   });
 
   it("rejects dangerous redemption links", () => {

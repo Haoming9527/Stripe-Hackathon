@@ -3,12 +3,13 @@ import type { Viewer } from "../types";
 import { assert, normalizeEmail, required, windowIsOpen } from "../validation";
 import { serializable, type MutationResult } from "./shared";
 
-export async function toggleVote(
+export async function setVote(
   form: FormData,
   viewer: Viewer,
+  withdraw: boolean,
 ): Promise<MutationResult> {
   const projectId = required(form, "projectId", "a project");
-  const added = await serializable(async (tx) => {
+  await serializable(async (tx) => {
     const project = await tx.project.findUnique({
       where: { id: projectId },
       include: {
@@ -28,12 +29,9 @@ export async function toggleVote(
       windowIsOpen(project.hackathon, "voting"),
       "Voting is currently closed.",
     );
-    const existing = await tx.vote.findUnique({
-      where: { userId_projectId: { userId: viewer.id, projectId } },
-    });
-    if (existing) {
-      await tx.vote.delete({ where: { id: existing.id } });
-      return false;
+    if (withdraw) {
+      await tx.vote.deleteMany({ where: { userId: viewer.id, projectId } });
+      return;
     }
     assert(
       project.status === "SUBMITTED",
@@ -44,9 +42,14 @@ export async function toggleVote(
       project.team.members.some(
         (member) =>
           member.userId === viewer.id ||
-          member.normalizedEmail === normalizeEmail(viewer.email),
+          (member.userId === null &&
+            member.normalizedEmail === normalizeEmail(viewer.email)),
       );
     assert(!ownProject, "You cannot vote for your own team's project.");
+    const existing = await tx.vote.findUnique({
+      where: { userId_projectId: { userId: viewer.id, projectId } },
+    });
+    if (existing) return;
     const count = await tx.vote.count({
       where: { hackathonId: project.hackathonId, userId: viewer.id },
     });
@@ -54,14 +57,14 @@ export async function toggleVote(
       count < project.hackathon.votesPerUser,
       "You have used all your votes for this hackathon. Remove a vote to choose another project.",
     );
-    await tx.vote.create({
+    await tx.vote.createMany({
       data: { hackathonId: project.hackathonId, userId: viewer.id, projectId },
+      skipDuplicates: true,
     });
-    return true;
   });
   return {
-    message: added
-      ? "Vote saved."
-      : "Vote removed. You can use it on another project.",
+    message: withdraw
+      ? "Vote removed. You can use it on another project."
+      : "Vote saved.",
   };
 }

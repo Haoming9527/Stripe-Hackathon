@@ -61,6 +61,7 @@ test("guests browse galleries without private data and mobile pages stay within 
 });
 
 test("participants form teams, invite teammates, save a private draft, and publish with consent", async ({ page, context, browser }) => {
+  test.setTimeout(90_000);
   await authenticate(context, "BUILDER");
   await page.goto(`/hackathons/${eventSlug}/portal?tab=team`);
   await page.getByLabel("Team name", { exact: true }).fill("Browser builders");
@@ -85,10 +86,35 @@ test("participants form teams, invite teammates, save a private draft, and publi
     await teammateContext.close();
   }
 
+  const organizerContext = await browser.newContext({ baseURL: process.env.E2E_BASE_URL });
+  try {
+    await authenticate(organizerContext, "ADMIN");
+    const organizer = await organizerContext.newPage();
+    await organizer.goto(`/admin/${eventId}?tab=participants`);
+    const teammate = organizer.getByRole("row").filter({ hasText: "teammate@example.com" });
+    await teammate.getByText("Edit participant", { exact: true }).click();
+    await teammate.getByRole("checkbox").check();
+    await teammate.getByRole("button", { name: "Remove participant", exact: true }).click();
+    await expect(teammate).toContainText("Revoked");
+    await page.reload();
+    const reservedSeat = page.locator(".member-row").filter({ hasText: "teammate@example.com" });
+    await expect(reservedSeat).toContainText("Access revoked");
+    await expect(reservedSeat.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
+    await expect(page.getByText("2 / 2 members", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Send invitation", exact: true })).toBeDisabled();
+    await teammate.getByRole("button", { name: "Restore participant", exact: true }).click();
+    await expect(teammate.getByRole("button", { name: "Remove participant", exact: true })).toBeVisible();
+  } finally {
+    await organizerContext.close();
+  }
+
   await page.goto(`/hackathons/${eventSlug}/portal?tab=submission`);
   await page.getByLabel("Project name", { exact: false }).fill("A project from the browser");
   await page.getByRole("button", { name: "Save draft", exact: true }).click();
   await expect(page.getByText("Draft saved", { exact: true })).toBeVisible();
+  const secondTab = await context.newPage();
+  await secondTab.goto(page.url());
+  await secondTab.getByLabel("Project name", { exact: false }).fill("Older draft title");
   const beforePublishing = await page.request.get(`/hackathons/${eventSlug}`);
   expect(await beforePublishing.text()).not.toContain("A project from the browser");
   await page.locator('textarea[name="description"]').fill("A working project created through the participant portal and verified in a real browser.");
@@ -103,6 +129,11 @@ test("participants form teams, invite teammates, save a private draft, and publi
   await page.getByRole("checkbox", { name: /I agree to publish/ }).check();
   await page.getByRole("button", { name: "Submit and publish", exact: true }).click();
   await expect(page.getByText("Published in gallery", { exact: true })).toBeVisible();
+  await secondTab.getByRole("button", { name: "Save draft", exact: true }).click();
+  await expect(secondTab.getByRole("alert").filter({ hasText: "changed since you opened" })).toBeVisible();
+  await expect(secondTab.getByLabel("Project name", { exact: false })).toHaveValue("Older draft title");
+  await secondTab.close();
+  await page.bringToFront();
   const publicLink = page.getByRole("link", { name: "View public project", exact: true });
   await expect(publicLink).toBeVisible();
   const projectHref = await publicLink.getAttribute("href");
@@ -151,11 +182,21 @@ test("signed-in visitors vote and undo within the same allowance without partici
   await page.goto(`/hackathons/${eventSlug}`);
   await expect(page.getByText("1 of 1 votes remaining", { exact: true })).toBeVisible();
   const project = page.locator("article.project-card").filter({ has: page.getByRole("link", { name: "Seeded public project", exact: true }) });
+  const detail = await context.newPage();
+  await detail.goto(`/hackathons/${eventSlug}/projects/${existingProjectId}`);
+  const voteButton = detail.getByRole("button", { name: "Vote for project", exact: true });
+  await expect(voteButton).toBeVisible();
   await project.getByRole("button", { name: "Vote for project", exact: true }).click();
   await expect(page.getByText("0 of 1 votes remaining", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "All votes used", exact: true }).first()).toBeDisabled();
+  await voteButton.click();
+  const undoButton = detail.getByRole("button", { name: /Voted.*undo/ });
+  await expect(undoButton).toBeVisible();
   await project.getByRole("button", { name: /Voted.*undo/ }).click();
   await expect(page.getByText("1 of 1 votes remaining", { exact: true })).toBeVisible();
+  await undoButton.click();
+  await expect(voteButton).toBeVisible();
+  await detail.close();
   await page.goto(`/hackathons/${eventSlug}/portal`);
   await expect(page.getByRole("heading", { name: "Your invitation opens the door." })).toBeVisible();
   await expect(page.getByText(privateBriefing)).toHaveCount(0);
@@ -188,16 +229,28 @@ test("admins create and edit events, preview imports, and allocate unique credit
   expect(eventPath).not.toBe("/admin/new");
 
   await page.goto(`${eventPath}?tab=settings`);
-  await page.getByLabel("Short introduction", { exact: false }).fill("Created and edited through the browser.");
+  await page.getByRole("button", { name: /Add track/ }).click();
+  await page.getByLabel("Track name 1", { exact: true }).fill("Commerce");
   await page.getByRole("button", { name: "Save event", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Hackathon saved." })).toBeVisible();
+  const tracks = page.locator('input[name="tracks"]');
+  await expect(tracks).toHaveValue(/"id":"[^"]+"/);
+  const savedTracks = await tracks.inputValue();
+  await page.getByLabel("Short introduction", { exact: false }).fill("Created and edited through the browser.");
+  await page.getByLabel("Location", { exact: true }).fill("Browser test venue");
+  await page.getByRole("button", { name: "Save event", exact: true }).click();
+  await expect(page.getByText(/Browser test venue ·/)).toBeVisible();
   await page.reload();
+  await expect(tracks).toHaveValue(savedTracks);
   await expect(page.getByLabel("Short introduction", { exact: false })).toHaveValue("Created and edited through the browser.");
 
   await page.goto(`${eventPath}?tab=participants`);
   await page.getByRole("textbox", { name: /^Or paste email addresses/ }).fill("first@example.com\nnot-an-email");
   await expect(page.getByRole("button", { name: "Import participants", exact: true })).toBeDisabled();
   await expect(page.getByRole("alert").filter({ hasText: "invalid address" })).toBeVisible();
+  await page.getByRole("textbox", { name: /^Or paste email addresses/ }).fill("email,name\nfirst@example.com,First\n,Second");
+  await expect(page.getByRole("alert").filter({ hasText: "Missing email in CSV record 3" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Import participants", exact: true })).toBeDisabled();
   await page.getByRole("textbox", { name: /^Or paste email addresses/ }).fill("first@example.com\nFIRST@example.com\nsecond@example.com");
   await expect(page.getByText(/duplicates ignored/)).toContainText("1");
   await page.getByRole("button", { name: "Import participants", exact: true }).click();

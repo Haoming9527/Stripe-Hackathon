@@ -97,39 +97,65 @@ describe("server authorization", () => {
 describe("vote invariants", () => {
   it("blocks every contributor from self-voting even if membership data later changes", async () => {
     mocked.tx.project.findUnique.mockResolvedValue({ status: "SUBMITTED", hackathon: activeEvent, contributorIds: [viewer.id], team: { members: [] } });
-    await expect(performMutation("vote.toggle", form({ projectId: "project-1" }), viewer)).rejects.toThrow("own team's project");
-    expect(mocked.tx.vote.create).not.toHaveBeenCalled();
+    await expect(performMutation("vote.add", form({ projectId: "project-1" }), viewer)).rejects.toThrow("own team's project");
+    expect(mocked.tx.vote.createMany).not.toHaveBeenCalled();
   });
 
   it("uses the same vote allowance for visitors and participants", async () => {
     mocked.tx.project.findUnique.mockResolvedValue({ status: "SUBMITTED", hackathonId: "event-1", hackathon: activeEvent, contributorIds: [], team: { members: [] } });
     mocked.tx.vote.findUnique.mockResolvedValue(null);
     mocked.tx.vote.count.mockResolvedValue(3);
-    await expect(performMutation("vote.toggle", form({ projectId: "project-1" }), viewer)).rejects.toThrow("used all your votes");
+    await expect(performMutation("vote.add", form({ projectId: "project-1" }), viewer)).rejects.toThrow("used all your votes");
     expect(mocked.tx.participant.findUnique).not.toHaveBeenCalled();
-    expect(mocked.tx.vote.create).not.toHaveBeenCalled();
+    expect(mocked.tx.vote.createMany).not.toHaveBeenCalled();
   });
 
   it("allows withdrawal at the allowance limit", async () => {
     mocked.tx.project.findUnique.mockResolvedValue({ status: "SUBMITTED", hackathon: activeEvent, contributorIds: [], team: { members: [] } });
     mocked.tx.vote.findUnique.mockResolvedValue({ id: "vote-1" });
-    await expect(performMutation("vote.toggle", form({ projectId: "project-1" }), viewer)).resolves.toMatchObject({ message: expect.stringContaining("removed") });
-    expect(mocked.tx.vote.delete).toHaveBeenCalledWith({ where: { id: "vote-1" } });
+    await expect(performMutation("vote.withdraw", form({ projectId: "project-1" }), viewer)).resolves.toMatchObject({ message: expect.stringContaining("removed") });
+    expect(mocked.tx.vote.deleteMany).toHaveBeenCalledWith({ where: { projectId: "project-1", userId: viewer.id } });
     expect(mocked.tx.vote.count).not.toHaveBeenCalled();
   });
 
   it("lets a voter withdraw an existing ballot after moderation hides the project", async () => {
     mocked.tx.project.findUnique.mockResolvedValue({ status: "HIDDEN", hackathon: activeEvent, contributorIds: [], team: { members: [] } });
     mocked.tx.vote.findUnique.mockResolvedValue({ id: "vote-hidden" });
-    await expect(performMutation("vote.toggle", form({ projectId: "project-hidden" }), viewer)).resolves.toMatchObject({ message: expect.stringContaining("removed") });
-    expect(mocked.tx.vote.delete).toHaveBeenCalledWith({ where: { id: "vote-hidden" } });
+    await expect(performMutation("vote.withdraw", form({ projectId: "project-hidden" }), viewer)).resolves.toMatchObject({ message: expect.stringContaining("removed") });
+    expect(mocked.tx.vote.deleteMany).toHaveBeenCalledWith({ where: { projectId: "project-hidden", userId: viewer.id } });
   });
 
   it("never accepts a new vote for a hidden project", async () => {
     mocked.tx.project.findUnique.mockResolvedValue({ status: "HIDDEN", hackathon: activeEvent, contributorIds: [], team: { members: [] } });
     mocked.tx.vote.findUnique.mockResolvedValue(null);
-    await expect(performMutation("vote.toggle", form({ projectId: "project-hidden" }), viewer)).rejects.toThrow("not available for voting");
-    expect(mocked.tx.vote.create).not.toHaveBeenCalled();
+    await expect(performMutation("vote.add", form({ projectId: "project-hidden" }), viewer)).rejects.toThrow("not available for voting");
+    expect(mocked.tx.vote.createMany).not.toHaveBeenCalled();
+  });
+
+  it("keeps an existing ballot on a repeated vote even at the limit", async () => {
+    mocked.tx.project.findUnique.mockResolvedValue({ status: "SUBMITTED", hackathon: activeEvent, contributorIds: [], team: { members: [] } });
+    mocked.tx.vote.findUnique.mockResolvedValue({ id: "vote-1" });
+    await performMutation("vote.add", form({ projectId: "project-1" }), viewer);
+    expect(mocked.tx.vote.deleteMany).not.toHaveBeenCalled();
+    expect(mocked.tx.vote.createMany).not.toHaveBeenCalled();
+    expect(mocked.tx.vote.count).not.toHaveBeenCalled();
+  });
+
+  it("keeps a withdrawn ballot absent on a repeated withdrawal", async () => {
+    mocked.tx.project.findUnique.mockResolvedValue({ status: "SUBMITTED", hackathon: activeEvent });
+    mocked.tx.vote.deleteMany.mockResolvedValue({ count: 0 });
+    await performMutation("vote.withdraw", form({ projectId: "project-1" }), viewer);
+    expect(mocked.tx.vote.createMany).not.toHaveBeenCalled();
+  });
+
+  it("allows a voter with the former email of another linked team member", async () => {
+    mocked.tx.project.findUnique.mockResolvedValue({
+      status: "SUBMITTED", hackathon: activeEvent, hackathonId: activeEvent.id, contributorIds: [],
+      team: { members: [{ userId: "different-user", normalizedEmail: viewer.email }] },
+    });
+    mocked.tx.vote.count.mockResolvedValue(0);
+    await performMutation("vote.add", form({ projectId: "project-1" }), viewer);
+    expect(mocked.tx.vote.createMany).toHaveBeenCalledOnce();
   });
 });
 
@@ -179,6 +205,18 @@ describe("credit allocation", () => {
     expect(mocked.tx.creditVoucher.update).not.toHaveBeenCalled();
   });
 
+  it("leaves an unreadable voucher unclaimed", async () => {
+    mocked.tx.creditVoucher.findUnique.mockResolvedValue({
+      participantId: "person-1",
+      encryptedValue: "unreadable",
+      claimedAt: null,
+      offer: { hackathonId: "event-1", expiresAt: null },
+    });
+    mocked.tx.participant.findUnique.mockResolvedValue({ id: "person-1", userId: viewer.id, revokedAt: null });
+    await expect(performMutation("credits.claim", form({ voucherId: "voucher-1" }), viewer)).rejects.toThrow("credit could not be opened");
+    expect(mocked.tx.creditVoucher.update).not.toHaveBeenCalled();
+  });
+
   it("treats repeated claims as idempotent", async () => {
     mocked.tx.creditVoucher.findUnique.mockResolvedValue({ participantId: "person-1", claimedAt: new Date(), offer: { hackathonId: "event-1", expiresAt: null } });
     mocked.tx.participant.findUnique.mockResolvedValue({ id: "person-1", userId: viewer.id, revokedAt: null });
@@ -202,8 +240,20 @@ describe("submission consent", () => {
     mocked.tx.hackathon.findUnique.mockResolvedValue(activeEvent);
     mocked.tx.participant.findUnique.mockResolvedValue({ id: "person-1", userId: viewer.id, teamId: "team-1", revokedAt: null });
     mocked.tx.team.findUnique.mockResolvedValue({ id: "team-1", hackathonId: "event-1", project: null, members: [{ userId: viewer.id }] });
-    await expect(performMutation("project.save", form({ hackathonId: "event-1", name: "Project", description: "What it does", videoUrl: "https://youtu.be/abc", githubUrl: "https://github.com/team/project", publish: "true" }), viewer)).rejects.toThrow("Agree to publish");
+    await expect(performMutation("project.save", form({ hackathonId: "event-1", teamId: "team-1", name: "Project", description: "What it does", videoUrl: "https://youtu.be/abc", githubUrl: "https://github.com/team/project", publish: "true" }), viewer)).rejects.toThrow("Agree to publish");
     expect(mocked.tx.project.upsert).not.toHaveBeenCalled();
+  });
+
+  it.each(["DRAFT", "SUBMITTED"])("rejects a stale draft save after a teammate's %s edit", async status => {
+    mocked.tx.participant.findUnique.mockResolvedValue({ id: "person-1", userId: viewer.id, teamId: "team-1" });
+    mocked.tx.team.findUnique.mockResolvedValue({
+      id: "team-1", hackathonId: activeEvent.id, members: [{ userId: viewer.id }],
+      project: { status, updatedAt: new Date("2026-01-01T00:01:00Z") },
+    });
+    const stale = form({ hackathonId: activeEvent.id, teamId: "team-1", name: "Old draft", expectedUpdatedAt: "2026-01-01T00:00:00.000Z" });
+    await expect(performMutation("project.save", stale, viewer)).rejects.toThrow("changed since you opened");
+    expect(mocked.tx.project.upsert).not.toHaveBeenCalled();
+    expect(mocked.tx.projectTrack.deleteMany).not.toHaveBeenCalled();
   });
 });
 

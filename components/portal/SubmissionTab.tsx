@@ -15,6 +15,7 @@ export function SubmissionTab({
   const slug = event.slug;
   const base = `/hackathons/${slug}/portal`;
   const project = team?.project;
+  const expectedUpdatedAt = project?.updatedAt.toISOString() ?? "";
   return (
     <>
       <div className="section-heading">
@@ -66,7 +67,10 @@ export function SubmissionTab({
           <div className="panel">
             <ActionForm intent="project.save" className="stack">
               <input type="hidden" name="hackathonId" value={event.id} />
+              <input type="hidden" name="teamId" value={team.id} />
+              <input type="hidden" name="expectedUpdatedAt" value={expectedUpdatedAt} />
               <fieldset
+                key={`${team.id}:${expectedUpdatedAt}`}
                 disabled={!submissionsOpen}
                 className="form-fieldset stack"
               >

@@ -56,7 +56,7 @@ export function ProjectVote({
       </Link>
     );
   return (
-    <ActionForm intent="vote.toggle" className="vote-form">
+    <ActionForm intent={state.voted ? "vote.withdraw" : "vote.add"} className="vote-form">
       <input type="hidden" name="projectId" value={projectId} />
       <button
         type="submit"

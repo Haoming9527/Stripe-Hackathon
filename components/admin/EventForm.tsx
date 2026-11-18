@@ -332,6 +332,7 @@ export default function EventForm({
           projects must select at least one.
         </p>
         <Repeater
+          key={event?.tracks.map((track) => track.id).join(",")}
           name="tracks"
           initial={
             event?.tracks.map(({ id, name, description }) => ({

@@ -216,9 +216,12 @@ export function parseParticipants(text: string): ParticipantImport {
   const participants: ImportParticipant[] = [];
   const invalid: string[] = [];
   let duplicates = 0;
-  for (const candidate of candidates) {
+  for (const [index, candidate] of candidates.entries()) {
     const email = normalizeEmail(candidate.email);
-    if (!email) continue;
+    if (!email) {
+      if (emailColumn >= 0) invalid.push(`Missing email in CSV record ${index + 2}`);
+      continue;
+    }
     if (!isEmail(email)) {
       invalid.push(candidate.email.slice(0, 100));
       continue;
@@ -244,21 +247,28 @@ export function parseVoucherValues(text: string): {
     text.length <= 1_000_000,
     "The import is too large. Use a file smaller than 1 MB.",
   );
-  const parsed = Papa.parse<string[]>(text.replace(/^\uFEFF/, ""), {
+  const source = text.trim();
+  const parsed = Papa.parse<string[]>(source, {
     skipEmptyLines: "greedy",
   });
-  assert(
-    parsed.errors.every((error) => error.code === "UndetectableDelimiter"),
-    "The CSV could not be read. Check quoted values and try again.",
-  );
   const first =
     parsed.data[0]?.map((value) => value.trim().toLowerCase()) ?? [];
-  const column = first.findIndex((value) =>
-    ["code", "url", "link", "value", "redemption_url"].includes(value),
-  );
-  const candidates = (column >= 0 ? parsed.data.slice(1) : parsed.data)
-    .map((row) => (row[column >= 0 ? column : 0] ?? "").trim())
-    .filter(Boolean);
+  const column = /^https?:\/\//i.test(source)
+    ? -1
+    : first.findIndex((value) =>
+        ["code", "url", "link", "value", "redemption_url"].includes(value),
+      );
+  let cells: string[];
+  if (column >= 0) {
+    assert(
+      parsed.errors.every((error) => error.code === "UndetectableDelimiter"),
+      "The CSV could not be read. Check quoted values and try again.",
+    );
+    cells = parsed.data.slice(1).map((row) => row[column] ?? "");
+  } else {
+    cells = source.split(/\r\n|[\r\n]/);
+  }
+  const candidates = cells.map((value) => value.trim()).filter(Boolean);
   assert(candidates.length <= 5000, "Import at most 5,000 vouchers at a time.");
   assert(
     candidates.every((value) => value.length <= 4096),

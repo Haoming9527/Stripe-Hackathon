@@ -11,7 +11,7 @@ import {
   respondToInvitation,
 } from "./domain/teams";
 import { moderateProject, saveProject } from "./domain/projects";
-import { toggleVote } from "./domain/votes";
+import { setVote } from "./domain/votes";
 import {
   assignCredits,
   claimCredit,
@@ -62,8 +62,9 @@ export async function performMutation(
       return saveProject(form, viewer);
     case "project.moderate":
       return moderateProject(form, viewer);
-    case "vote.toggle":
-      return toggleVote(form, viewer);
+    case "vote.add":
+    case "vote.withdraw":
+      return setVote(form, viewer, intent === "vote.withdraw");
     case "credits.offer.save":
       return saveCreditOffer(form, viewer);
     case "credits.import":

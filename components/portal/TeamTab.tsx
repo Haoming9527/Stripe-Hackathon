@@ -34,7 +34,7 @@ export function TeamTab({
         </div>
         {team && (
           <span className="badge">
-            {team.members.length} / {event.maxTeamSize} members
+            {team._count.members} / {event.maxTeamSize} members
           </span>
         )}
       </div>
@@ -61,6 +61,9 @@ export function TeamTab({
                         member.normalizedEmail.split("@")[0]}
                       {member.userId === team.ownerId && (
                         <span className="member-role">Owner</span>
+                      )}
+                      {member.revokedAt && (
+                        <span className="member-role">Access revoked</span>
                       )}
                     </strong>
                     <small>{member.normalizedEmail}</small>
@@ -128,7 +131,7 @@ export function TeamTab({
                   <button
                     type="submit"
                     className="button button-primary"
-                    disabled={team.members.length >= event.maxTeamSize}
+                    disabled={team._count.members >= event.maxTeamSize}
                   >
                     <Plus size={16} /> Send invitation
                   </button>

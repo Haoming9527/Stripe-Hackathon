@@ -45,7 +45,7 @@ export default async function ProjectPage({
                     some: {
                       OR: [
                         { userId: viewer.id },
-                        { normalizedEmail: viewer.email },
+                        { userId: null, normalizedEmail: viewer.email },
                       ],
                     },
                   },

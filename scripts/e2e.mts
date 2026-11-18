@@ -1,10 +1,11 @@
 import { randomBytes, randomUUID, createCipheriv, createHmac } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import { createServer } from "node:net";
 import path from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
 import { PrismaClient } from "@prisma/client";
+import { migrateTestSchema } from "./test-migrations.mjs";
 
 const root = process.cwd();
 const schema = `hackathon_e2e_${randomUUID().replaceAll("-", "")}`;
@@ -152,13 +153,7 @@ async function run() {
   target.searchParams.set("connection_limit", "5");
   const isolatedUrl = target.toString();
   db = new PrismaClient({ datasourceUrl: isolatedUrl });
-  const migration = (await readFile(path.join(root, "prisma/migrations/20261118000000_initial/migration.sql"), "utf8"))
-    .replace(/CREATE SCHEMA IF NOT EXISTS "public";/g, "");
-  if (/"public"\./.test(migration)) throw new Error("The test migration must not target the public schema.");
-  await db.$transaction(async (tx) => {
-    await tx.$executeRawUnsafe(`SET LOCAL search_path TO "${schema}"`);
-    for (const statement of migration.split(";").map((value) => value.trim()).filter(Boolean)) await tx.$executeRawUnsafe(statement);
-  }, { timeout: 60_000 });
+  await migrateTestSchema(target);
   const sessions = await seedFixtures(db);
   const env: NodeJS.ProcessEnv = {
     ...process.env,

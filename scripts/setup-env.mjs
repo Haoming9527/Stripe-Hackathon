@@ -1,20 +1,55 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { resolve } from "node:path";
+import { parseEnv } from "node:util";
 
 const destination = resolve(process.cwd(), ".env");
-let source;
-try { source = readFileSync(destination, "utf8"); } catch { source = ""; }
-const keys = new Set([...source.matchAll(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/gm)].map(match => match[1]));
+let source = "";
+try {
+  source = readFileSync(destination, "utf8");
+} catch (error) {
+  if (error.code !== "ENOENT") throw error;
+}
+const existing = parseEnv(source);
+const newline = source.includes("\r\n") ? "\r\n" : "\n";
 const defaults = {
   NEXTAUTH_URL: "http://localhost:3000",
   NEXTAUTH_SECRET: randomBytes(32).toString("base64"),
   ADMIN_EMAILS: process.argv[2] || "admin@example.com",
   CREDITS_ENCRYPTION_KEY: randomBytes(32).toString("base64"),
 };
-const additions = Object.entries(defaults).filter(([key]) => !keys.has(key));
-if (additions.length) {
-  const lines = additions.map(([key, value]) => `${key}=${JSON.stringify(value)}`).join("\n");
-  writeFileSync(destination, `${source.trimEnd()}\n\n# Hackathon platform settings\n${lines}\n`, { mode: 0o600 });
+const additions = [];
+let filled = 0;
+for (const [key, value] of Object.entries(defaults)) {
+  if (!Object.hasOwn(existing, key)) {
+    additions.push(`${key}=${JSON.stringify(value)}`);
+    continue;
+  }
+  if (key !== "NEXTAUTH_SECRET" && key !== "CREDITS_ENCRYPTION_KEY") continue;
+  if (existing[key].trim()) continue;
+  // Keep the template's position, line endings and trailing comments.
+  const blank = new RegExp(
+    `^([\\t ]*(?:export[\\t ]+)?${key}[\\t ]*=)[\\t ]*(?:"\\s*"|'\\s*')?(?=[\\t ]*(?:#|\\r?$))`,
+    "gm",
+  );
+  const assignment = [...source.matchAll(blank)].at(-1);
+  if (assignment) {
+    const { index } = assignment;
+    source =
+      source.slice(0, index) +
+      assignment[1] +
+      JSON.stringify(value) +
+      source.slice(index + assignment[0].length);
+    filled++;
+  } else {
+    additions.push(`${key}=${JSON.stringify(value)}`);
+  }
 }
-console.log(`Environment ready: ${additions.length} missing settings added; existing values preserved. Secret values were not displayed.`);
+if (additions.length) {
+  source += `${newline}# Hackathon platform settings${newline}${additions.join(newline)}${newline}`;
+}
+if (filled || additions.length)
+  writeFileSync(destination, source, { mode: 0o600 });
+console.log(
+  `Environment setup complete. Added ${additions.length} settings and filled ${filled} empty secrets.`,
+);

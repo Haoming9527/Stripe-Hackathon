@@ -10,7 +10,7 @@ const knownIntents = new Set([
   "event.save", "event.delete", "event.status", "event.windows",
   "participants.import", "participants.create", "participants.update", "participants.remove", "participants.restore",
   "team.create", "team.invite", "team.remove", "team.leave",
-  "invitation.respond", "invitation.cancel", "project.save", "project.moderate", "vote.toggle",
+  "invitation.respond", "invitation.cancel", "project.save", "project.moderate", "vote.add", "vote.withdraw",
   "credits.offer.save", "credits.import", "credits.assign", "credits.claim", "participants", "votes",
 ]);
 

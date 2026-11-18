@@ -23,6 +23,7 @@ export function safeCallbackPath(value: string | null | undefined): string {
     const parsed = new URL(value, "https://community.invalid");
     if (
       parsed.origin !== "https://community.invalid" ||
+      parsed.pathname.startsWith("//") ||
       parsed.pathname.startsWith("/api/auth")
     )
       return "/";

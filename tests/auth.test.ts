@@ -58,4 +58,9 @@ describe("sign-in destinations and setup", () => {
       expect(isConfiguredValue(value)).toBe(false);
     expect(isConfiguredValue("a-real-configured-value")).toBe(true);
   });
+
+  it("returns a single-rooted path after normalization", () => {
+    expect(safeCallbackPath("/nested/../hackathons")).toBe("/hackathons");
+    expect(safeCallbackPath("/nested/..//")).toBe("/");
+  });
 });

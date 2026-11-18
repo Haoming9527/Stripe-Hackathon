@@ -1,6 +1,5 @@
 import "server-only";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import type { Prisma } from "@prisma/client";
 import { getServerSession, type NextAuthOptions } from "next-auth";
 import GoogleProvider, { type GoogleProfile } from "next-auth/providers/google";
 import { redirect } from "next/navigation";
@@ -58,25 +57,38 @@ export const authOptions: NextAuthOptions = {
       if (google.email_verified !== true || !google.email || !google.sub)
         return "/login?error=UnverifiedEmail";
       const email = normalizeIdentityEmail(google.email);
-      const [existingAccount, emailOwner, viewer] = await Promise.all([
-        prisma.account.findUnique({
-          where: {
-            provider_providerAccountId: {
-              provider: "google",
-              providerAccountId: google.sub,
+      try {
+        const [existingAccount, emailOwner, viewer] = await Promise.all([
+          prisma.account.findUnique({
+            where: {
+              provider_providerAccountId: {
+                provider: "google",
+                providerAccountId: google.sub,
+              },
             },
-          },
-        }),
-        prisma.user.findUnique({ where: { email } }),
-        getViewer(),
-      ]);
-      // Email does not auto-link unrelated provider subjects, even if Google reports it verified.
-      if (emailOwner && emailOwner.id !== existingAccount?.userId)
-        return "/login?error=OAuthAccountNotLinked";
-      if (viewer && viewer.id !== existingAccount?.userId)
-        return "/login?error=SessionConflict";
+            select: { userId: true },
+          }),
+          prisma.user.findUnique({ where: { email }, select: { id: true } }),
+          getViewer(),
+        ]);
+        if (emailOwner && emailOwner.id !== existingAccount?.userId)
+          return "/login?error=OAuthAccountNotLinked";
+        if (viewer && viewer.id !== existingAccount?.userId)
+          return "/login?error=SessionConflict";
 
-      return true;
+        // Sessions derive roles from User.email. Persist Google's verified address
+        // before NextAuth issues a session for a returning Google subject.
+        if (existingAccount)
+          await prisma.user.update({
+            where: { id: existingAccount.userId },
+            data: { email, emailVerified: new Date() },
+          });
+        return true;
+      } catch {
+        // NextAuth includes thrown callback messages in its error redirect.
+        console.error("[auth] SIGN_IN_IDENTITY_CHECK_FAILED");
+        return "/login?error=Configuration";
+      }
     },
     async session({ session, user }) {
       if (session.user) {
@@ -98,21 +110,21 @@ export const authOptions: NextAuthOptions = {
     },
   },
   events: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account, profile, isNewUser }) {
       if (account?.provider !== "google" || !profile?.email) return;
       const email = normalizeIdentityEmail(profile.email);
-      await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-        await tx.user.update({
-          where: { id: user.id },
-          data: { email, emailVerified: new Date() },
+      if (isNewUser)
+        await prisma.user.update({
+          where: { id: user.id, email },
+          data: { emailVerified: new Date() },
         });
-        await tx.participant.updateMany({
-          where: {
-            normalizedEmail: email,
-            OR: [{ userId: null }, { userId: user.id }],
-          },
-          data: { userId: user.id },
-        });
+      await prisma.participant.updateMany({
+        where: {
+          normalizedEmail: email,
+          userId: null,
+          hackathon: { participants: { none: { userId: user.id } } },
+        },
+        data: { userId: user.id },
       });
     },
   },

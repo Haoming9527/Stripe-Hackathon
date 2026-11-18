@@ -1,13 +1,13 @@
 /** Optional live PostgreSQL integration suite. It never uses the application schema. */
 import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Viewer } from "../lib/types";
+import { migrateTestSchema } from "../scripts/test-migrations.mjs";
 
 const database = vi.hoisted(() => ({ client: null as PrismaClient | null }));
 vi.mock("server-only", () => ({}));
+vi.mock("next-auth", () => ({ getServerSession: () => null }));
 vi.mock("../lib/db", () => {
   const proxy = new Proxy({}, {
     get(_target, key) {
@@ -22,6 +22,8 @@ vi.mock("../lib/db", () => {
 
 import { performMutation } from "../lib/domain";
 import { decryptVoucher } from "../lib/credits";
+import { authOptions } from "../lib/auth";
+import { findParticipant } from "../lib/queries";
 
 const enabled = Boolean(process.env.TEST_DATABASE_URL);
 const suite = enabled ? describe : describe.skip;
@@ -54,11 +56,7 @@ suite("isolated PostgreSQL domain integration", () => {
     process.env.DATABASE_URL_POOLED = target.toString();
     db = new PrismaClient({ datasourceUrl: target.toString() });
     database.client = db;
-    const sql = await readFile(path.join(process.cwd(), "prisma/migrations/20261118000000_initial/migration.sql"), "utf8");
-    await db.$transaction(async tx => {
-      await tx.$executeRawUnsafe(`SET LOCAL search_path TO "${schema}"`);
-      for (const statement of sql.split(";").map(item => item.trim()).filter(Boolean)) await tx.$executeRawUnsafe(statement);
-    }, { timeout: 60_000 });
+    await migrateTestSchema(target);
     process.env.CREDITS_ENCRYPTION_KEY = "47".repeat(32);
   }, 90_000);
 
@@ -104,7 +102,7 @@ suite("isolated PostgreSQL domain integration", () => {
 
   async function projectFor(person: Viewer, name = "Working project") {
     const team = await teamFor(person);
-    await performMutation("project.save", data({ hackathonId: eventId, name, description: "A working community project", videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", githubUrl: "https://github.com/community/project", publish: "true", consent: "on" }), person);
+    await performMutation("project.save", data({ hackathonId: eventId, teamId: team.id, name, description: "A working community project", videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", githubUrl: "https://github.com/community/project", publish: "true", consent: "on" }), person);
     return db.project.findUniqueOrThrow({ where: { teamId: team.id } });
   }
 
@@ -125,23 +123,28 @@ suite("isolated PostgreSQL domain integration", () => {
     const first = await projectFor(people[1], "First project");
     const second = await projectFor(people[2], "Second project");
     const visitor = people[4];
-    const results = await Promise.allSettled([first, second].map(project => performMutation("vote.toggle", data({ projectId: project.id }), visitor)));
+    const results = await Promise.allSettled([first, second].map(project => performMutation("vote.add", data({ projectId: project.id }), visitor)));
     expect(results.filter(result => result.status === "fulfilled")).toHaveLength(1);
     const ballots = await db.vote.findMany({ where: { userId: visitor.id } });
     expect(ballots).toHaveLength(1);
-    await performMutation("vote.toggle", data({ projectId: ballots[0].projectId }), visitor);
-    await performMutation("vote.toggle", data({ projectId: first.id }), visitor);
+    await Promise.all([1, 2].map(() => performMutation("vote.withdraw", data({ projectId: ballots[0].projectId }), visitor)));
+    expect(await db.vote.count({ where: { userId: visitor.id } })).toBe(0);
+    await Promise.all([1, 2].map(() => performMutation("vote.add", data({ projectId: first.id }), visitor)));
     expect(await db.vote.count({ where: { userId: visitor.id } })).toBe(1);
-    await expect(performMutation("vote.toggle", data({ projectId: first.id }), people[1])).rejects.toThrow("own team's project");
+    await expect(performMutation("vote.add", data({ projectId: first.id }), people[1])).rejects.toThrow("own team's project");
   }, 30_000);
 
   it("locks submitted rosters and keeps drafts private until explicit consent", async () => {
     const team = await teamFor(people[1]);
-    await performMutation("project.save", data({ hackathonId: eventId, name: "Draft" }), people[1]);
-    expect((await db.project.findUniqueOrThrow({ where: { teamId: team.id } })).status).toBe("DRAFT");
-    const submission = { hackathonId: eventId, name: "Published", description: "What it does", videoUrl: "https://youtu.be/dQw4w9WgXcQ", githubUrl: "https://github.com/community/project", publish: "true" };
+    await db.participant.update({ where: { hackathonId_userId: { hackathonId: eventId, userId: people[2].id } }, data: { teamId: team.id } });
+    await performMutation("project.save", data({ hackathonId: eventId, teamId: team.id, name: "Draft" }), people[1]);
+    const draft = await db.project.findUniqueOrThrow({ where: { teamId: team.id } });
+    expect(draft.status).toBe("DRAFT");
+    const submission = { hackathonId: eventId, teamId: team.id, expectedUpdatedAt: draft.updatedAt.toISOString(), name: "Published", description: "What it does", videoUrl: "https://youtu.be/dQw4w9WgXcQ", githubUrl: "https://github.com/community/project", publish: "true" };
     await expect(performMutation("project.save", data(submission), people[1])).rejects.toThrow("Agree to publish");
     await performMutation("project.save", data({ ...submission, consent: "on" }), people[1]);
+    await expect(performMutation("project.save", data({ ...submission, name: "Old draft", publish: "false" }), people[2])).rejects.toThrow("changed since you opened");
+    expect(await db.project.findUniqueOrThrow({ where: { id: draft.id } })).toMatchObject({ name: "Published", status: "SUBMITTED" });
     expect((await db.team.findUniqueOrThrow({ where: { id: team.id } })).rosterLockedAt).not.toBeNull();
     await expect(performMutation("team.leave", data({ teamId: team.id }), people[1])).rejects.toThrow("roster was locked");
   }, 30_000);
@@ -167,5 +170,28 @@ suite("isolated PostgreSQL domain integration", () => {
     await performMutation("credits.import", data({ offerId: offer.id, codes: "ONLY-ONE" }), people[0]);
     await expect(performMutation("credits.assign", data({ offerId: offer.id }), people[0])).rejects.toThrow("No assignments were changed");
     expect(await db.creditVoucher.count({ where: { offerId: offer.id, participantId: { not: null } } })).toBe(0);
+  }, 30_000);
+
+  it("keeps a returning Google identity and its revocation on the original registration", async () => {
+    const person = people[1];
+    const original = await db.participant.findUniqueOrThrow({
+      where: { hackathonId_userId: { hackathonId: eventId, userId: person.id } },
+    });
+    const email = "renamed@example.test";
+    const account = { type: "oauth" as const, provider: "google", providerAccountId: "returning-subject" };
+    await db.account.create({ data: { ...account, userId: person.id } });
+    const invitation = await db.participant.create({ data: { hackathonId: eventId, normalizedEmail: email } });
+    const input = { user: person, account, profile: { sub: account.providerAccountId, email, email_verified: true } };
+
+    expect(await authOptions.callbacks!.signIn!(input)).toBe(true);
+    expect((await db.user.findUniqueOrThrow({ where: { id: person.id } })).email).toBe(email);
+    await authOptions.events!.signIn!({ ...input, isNewUser: false });
+    expect((await findParticipant(eventId, person.id, email))?.id).toBe(original.id);
+    expect((await db.participant.findUniqueOrThrow({ where: { id: invitation.id } })).userId).toBeNull();
+
+    await performMutation("participants.remove", data({ hackathonId: eventId, participantId: original.id }), people[0]);
+    await authOptions.events!.signIn!({ ...input, isNewUser: false });
+    expect(await findParticipant(eventId, person.id, email)).toBeNull();
+    await expect(teamFor({ ...person, email })).rejects.toThrow("not registered");
   }, 30_000);
 });

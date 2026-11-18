@@ -86,7 +86,7 @@ export default async function GalleryPage({
                     some: {
                       OR: [
                         { userId: viewer.id },
-                        { normalizedEmail: viewer.email },
+                        { userId: null, normalizedEmail: viewer.email },
                       ],
                     },
                   },
@@ -121,7 +121,7 @@ export default async function GalleryPage({
     <>
       <section className="event-hero">
         <div className="shell">
-          <Link href="/" className="back-link">
+          <Link href="/hackathons" className="back-link">
             <ArrowLeft size={15} /> All hackathons
           </Link>
           <div className="event-hero-grid">
@@ -208,7 +208,7 @@ export default async function GalleryPage({
             <p>You can withdraw those votes and use them on another project.</p>
             <div className="inline">
               {unavailableVotes.map((vote, index) => (
-                <ActionForm intent="vote.toggle" key={vote.projectId}>
+                <ActionForm intent="vote.withdraw" key={vote.projectId}>
                   <input
                     type="hidden"
                     name="projectId"

@@ -130,7 +130,7 @@ export async function manageParticipant(
     const data = {
       name,
       normalizedEmail,
-      userId: user?.id ?? member?.userId ?? null,
+      userId: member?.userId ?? user?.id ?? null,
     };
     if (member) await tx.participant.update({ where: { id: member.id }, data });
     else await tx.participant.create({ data: { ...data, hackathonId } });

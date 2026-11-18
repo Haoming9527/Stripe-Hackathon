@@ -1,7 +1,7 @@
 import "server-only";
 import { Prisma } from "@prisma/client";
 import { db } from "../db";
-import { encryptVoucher, voucherFingerprint } from "../credits";
+import { decryptVoucher, encryptVoucher, voucherFingerprint } from "../credits";
 import type { Viewer } from "../types";
 import {
   assert,
@@ -223,11 +223,13 @@ export async function claimCredit(
       !voucher.offer.expiresAt || voucher.offer.expiresAt > new Date(),
       "This credit offer has expired.",
     );
-    if (!voucher.claimedAt)
+    if (!voucher.claimedAt) {
+      decryptVoucher(voucher.encryptedValue);
       await tx.creditVoucher.update({
         where: { id },
         data: { claimedAt: new Date() },
       });
+    }
   });
   return {
     message: "Credit claimed. Your redemption details are now available below.",

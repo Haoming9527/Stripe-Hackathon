@@ -17,11 +17,18 @@ import {
   type MutationResult,
 } from "./shared";
 
+// updatedAt is the editor's version. Advance it even if two writes share a millisecond.
+function nextProjectTimestamp(previous?: Date) {
+  return new Date(Math.max(Date.now(), (previous?.getTime() ?? 0) + 1));
+}
+
 export async function saveProject(
   form: FormData,
   viewer: Viewer,
 ): Promise<MutationResult> {
   const hackathonId = required(form, "hackathonId", "a hackathon");
+  const teamId = required(form, "teamId", "the team");
+  const expectedUpdatedAt = field(form, "expectedUpdatedAt", 40);
   const name = required(form, "name", "a project name", 150);
   const description = field(form, "description", 20_000);
   const video = field(form, "videoUrl", 2048);
@@ -50,6 +57,11 @@ export async function saveProject(
     assert(
       team && team.hackathonId === hackathonId,
       "This team could not be found.",
+    );
+    assert(
+      team.id === teamId &&
+        (team.project?.updatedAt.toISOString() ?? "") === expectedUpdatedAt,
+      "Your team or project changed since you opened this form. Copy your edits and reload the page to review the latest version.",
     );
     assert(
       team.members.length <= event.maxTeamSize,
@@ -89,13 +101,14 @@ export async function saveProject(
     if (isPublic && tracks.length)
       assert(trackIds.length >= 1, "Choose at least one track.");
     const firstPublish = isPublic && !team.project?.publishedAt;
-    const now = new Date();
+    const now = nextProjectTimestamp(team.project?.updatedAt);
     const data = {
       name,
       description,
       demoUrl,
       videoUrl,
       githubUrl: repositoryUrl,
+      updatedAt: now,
       status:
         team.project?.status === "HIDDEN"
           ? ("HIDDEN" as const)
@@ -161,7 +174,10 @@ export async function moderateProject(
       project?.publishedAt && project.consentAt,
       "Only projects already submitted by participants can be moderated.",
     );
-    await tx.project.update({ where: { id }, data: { status } });
+    await tx.project.update({
+      where: { id },
+      data: { status, updatedAt: nextProjectTimestamp(project.updatedAt) },
+    });
   });
   return {
     message:

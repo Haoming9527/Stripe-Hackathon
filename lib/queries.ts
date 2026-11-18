@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { normalizeIdentityEmail } from "@/lib/auth-policy";
 
 // Explicit public projections exclude participant emails, vouchers and totals.
 export const publicProjectSelect = {
@@ -59,13 +60,22 @@ export async function findParticipant(
   hackathonId: string,
   userId: string,
   email: string,
+  client: Pick<Prisma.TransactionClient, "participant"> = prisma,
 ) {
-  return prisma.participant.findFirst({
+  const linked = await client.participant.findUnique({
+    where: { hackathonId_userId: { hackathonId, userId } },
+  });
+  // A linked registration, including its revocation, takes precedence over
+  // an invitation imported for a later email address.
+  if (linked) return linked.revokedAt ? null : linked;
+  return client.participant.findUnique({
     where: {
-      hackathonId,
+      hackathonId_normalizedEmail: {
+        hackathonId,
+        normalizedEmail: normalizeIdentityEmail(email),
+      },
       revokedAt: null,
-      normalizedEmail: email.trim().toLowerCase(),
-      OR: [{ userId }, { userId: null }],
+      userId: null,
     },
   });
 }
