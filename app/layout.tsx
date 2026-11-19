@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Stripe Community Singapore · Hackathons",
-    template: "%s · Stripe Community Singapore",
+    default: "Stripe Singapore Community · Hackathons",
+    template: "%s · Stripe Singapore Community",
   },
   description:
     "Hackathons for the Stripe community in Singapore. Meet local builders, form a team, and share what you build.",

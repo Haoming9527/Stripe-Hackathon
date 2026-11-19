@@ -12,7 +12,7 @@ export default async function HackathonsPage() {
     <section className="shell event-directory">
       <header className="directory-heading">
         <h1>Public galleries</h1>
-        <p>Explore projects from Stripe Community Singapore hackathons.</p>
+        <p>Explore projects from Stripe Singapore Community hackathons.</p>
       </header>
       {events.length ? (
         <ul className="gallery-card-grid directory-list">
