@@ -1,4 +1,4 @@
-# Stripe Community Singapore Hackathons
+# Stripe Singapore Community Hackathons
 
 A multi-event platform with public project galleries, participant teams and submissions, sponsor credit allocation, and an organizer dashboard. Built with Next.js App Router, React, NextAuth 4, Prisma 6, and Neon PostgreSQL.
 
