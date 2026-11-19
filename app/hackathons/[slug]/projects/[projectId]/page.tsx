@@ -110,7 +110,7 @@ export default async function ProjectPage({
           <div className="project-resource-vote">
             <ProjectVote
               projectId={project.id}
-              slug={slug}
+              callbackUrl={`/hackathons/${slug}`}
               state={{
                 signedIn: !!viewer,
                 own: own > 0,

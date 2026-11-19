@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, Search } from "lucide-react";
 import { prisma } from "@/lib/db";
-import { getViewer } from "@/lib/auth";
+import { getViewer, missingAuthSettings } from "@/lib/auth";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import {
   findPublicEvent,
   findParticipant,
@@ -152,12 +153,13 @@ export default async function GalleryPage({
                   Open participant portal <ArrowRight size={16} />
                 </Link>
               ) : !viewer ? (
-                <Link
-                  href={`/login?callbackUrl=${encodeURIComponent(`/hackathons/${slug}/portal`)}`}
+                <GoogleSignInButton
+                  callbackUrl={`/hackathons/${slug}/portal`}
+                  disabled={missingAuthSettings().length > 0}
                   className="button button-primary"
                 >
-                  Participant sign in <ArrowRight size={16} />
-                </Link>
+                  Participant sign in with Google <ArrowRight size={16} />
+                </GoogleSignInButton>
               ) : (
                 <div className="notice">
                   Participating? Sign in with the email on your invitation.

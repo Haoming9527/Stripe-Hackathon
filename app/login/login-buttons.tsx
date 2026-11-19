@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { signIn, signOut } from "next-auth/react";
+import { signOut } from "next-auth/react";
+import { usePathname } from "next/navigation";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 
 function GoogleMark() {
   return (
@@ -33,42 +34,24 @@ export function LoginButtons({
   callbackUrl: string;
   googleEnabled: boolean;
 }) {
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState("");
-
-  async function continueWithGoogle() {
-    setPending(true);
-    setError("");
-    try {
-      await signIn("google", { callbackUrl }, { prompt: "select_account" });
-    } catch {
-      setError("Sign-in could not start. Please try again.");
-      setPending(false);
-    }
-  }
-
   return (
     <div className="login-options">
-      <button
-        type="button"
+      <GoogleSignInButton
+        callbackUrl={callbackUrl}
         className="entry-primary google-sign-in"
-        onClick={continueWithGoogle}
-        disabled={pending || !googleEnabled}
+        disabled={!googleEnabled}
       >
         <GoogleMark />
-        {pending ? "Opening Google…" : "Sign in with Google"}
-      </button>
-
-      {error && (
-        <p className="entry-message notice-error" role="alert">
-          {error}
-        </p>
-      )}
+        Sign in with Google
+      </GoogleSignInButton>
     </div>
   );
 }
 
 export function SignOutButton() {
+  const pathname = usePathname();
+  if (pathname === "/") return null;
+
   return (
     <button
       type="button"

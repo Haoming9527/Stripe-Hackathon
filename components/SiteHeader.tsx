@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
 import { CommunityLogo } from "@/components/CommunityLogo";
 import { SiteNavigation } from "@/components/SiteNavigation";
-import { getViewer } from "@/lib/auth";
-import { SignOutButton } from "@/components/SignOutButton";
+import { getViewer, missingAuthSettings } from "@/lib/auth";
+import { HeaderAuthButton } from "@/components/HeaderAuthButton";
 
 export async function SiteHeader() {
   const viewer = await getViewer();
@@ -24,50 +23,13 @@ export async function SiteHeader() {
               <span className="account-avatar" title={viewer.email}>
                 {(viewer.name || viewer.email).slice(0, 1).toUpperCase()}
               </span>
-              <SignOutButton />
+              <HeaderAuthButton signedIn />
             </div>
           ) : (
-            <Link href="/login" className="header-sign-in">
-              <span className="sign-in-label">
-                Sign in <ChevronRight aria-hidden="true" size={14} />
-              </span>
-              <svg
-                aria-hidden="true"
-                className="sign-in-cutout"
-                viewBox="0 0 94 39"
-                preserveAspectRatio="none"
-                focusable="false"
-              >
-                <mask
-                  id="sign-in-lettering"
-                  maskUnits="userSpaceOnUse"
-                  x="0"
-                  y="0"
-                  width="94"
-                  height="39"
-                >
-                  <rect width="94" height="39" fill="white" />
-                  <text x="16" y="24.5" fontSize="14" fill="black">
-                    Sign in
-                  </text>
-                  <path
-                    d="m70 16 3.5 3.5L70 23"
-                    fill="none"
-                    stroke="black"
-                    strokeWidth="1.3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </mask>
-                <rect
-                  width="94"
-                  height="39"
-                  rx="5"
-                  fill="white"
-                  mask="url(#sign-in-lettering)"
-                />
-              </svg>
-            </Link>
+            <HeaderAuthButton
+              signedIn={false}
+              disabled={missingAuthSettings().length > 0}
+            />
           )}
         </div>
       </div>

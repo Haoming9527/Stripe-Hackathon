@@ -8,6 +8,8 @@ import {
 import { VideoPreview } from "@/components/VideoPreview";
 import { CopyButton } from "@/components/CopyButton";
 import { ActionForm } from "@/components/ActionForm";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
+import { missingAuthSettings } from "@/lib/auth";
 import type { PublicProject } from "@/lib/queries";
 import { safeExternalUrl } from "@/lib/presentation";
 
@@ -21,11 +23,11 @@ export type ProjectVoteState = {
 
 export function ProjectVote({
   projectId,
-  slug,
+  callbackUrl,
   state,
 }: {
   projectId: string;
-  slug: string;
+  callbackUrl?: string;
   state: ProjectVoteState;
 }) {
   if (state.own)
@@ -48,12 +50,13 @@ export function ProjectVote({
     );
   if (!state.signedIn)
     return (
-      <Link
-        href={`/login?callbackUrl=${encodeURIComponent(`/hackathons/${slug}`)}`}
+      <GoogleSignInButton
+        callbackUrl={callbackUrl}
+        disabled={missingAuthSettings().length > 0}
         className="button button-small button-secondary"
       >
         <Heart size={15} /> Sign in to vote
-      </Link>
+      </GoogleSignInButton>
     );
   return (
     <ActionForm
@@ -122,7 +125,7 @@ export function ProjectCard({
           </a>
           <CopyButton value={url} share />
         </div>
-        <ProjectVote projectId={project.id} slug={slug} state={vote} />
+        <ProjectVote projectId={project.id} state={vote} />
       </div>
     </article>
   );

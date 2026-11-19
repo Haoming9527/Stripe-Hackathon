@@ -25,7 +25,7 @@ test("guests browse galleries without private data and mobile pages stay within 
   await expect(galleryLink).toHaveAttribute("href", "/hackathons");
   await expect(page.getByRole("button", { name: "Sign in with Google", exact: true })).toBeVisible();
   const navbar = page.getByRole("banner").locator(".header-inner");
-  const signIn = navbar.getByRole("link", { name: "Sign in", exact: true });
+  const signIn = navbar.getByRole("button", { name: "Sign in", exact: true });
   await page.mouse.move(5, 180);
   await expect(navbar).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await signIn.hover();
@@ -52,7 +52,7 @@ test("guests browse galleries without private data and mobile pages stay within 
   await expect(page.getByRole("contentinfo")).toBeVisible();
   await expect(page.getByRole("contentinfo")).toHaveText("Developer resources");
   await expect(page.getByRole("link", { name: "Seeded public project", exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Sign in to vote" }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign in to vote" }).first()).toBeVisible();
   await expect(page.getByText("Unpublished private draft", { exact: true })).toHaveCount(0);
   const response = await request.get(`/hackathons/${eventSlug}`);
   const html = await response.text();
@@ -85,6 +85,30 @@ test("guests browse galleries without private data and mobile pages stay within 
   const exported = await request.get(`/api/admin/export?hackathonId=${eventId}&type=votes`);
   expect(exported.status()).toBe(403);
 });
+
+const eventGallery = `/hackathons/${eventSlug}`;
+const filteredGallery = `${eventGallery}?q=Seeded+public&track=e2e-track&page=1#projects`;
+for (const { source, button, expectedReturn, start } of [
+  { source: "filtered gallery voting", button: "Sign in to vote", start: filteredGallery, expectedReturn: filteredGallery },
+  { source: "project details voting", button: "Sign in to vote", start: `${eventGallery}/projects/${existingProjectId}`, expectedReturn: eventGallery },
+  { source: "participant access", button: "Participant sign in with Google", start: eventGallery, expectedReturn: `${eventGallery}/portal` },
+]) {
+  test(`${source} opens Google with the correct return URL`, async ({ page }) => {
+    const google = "https://accounts.google.com/o/oauth2/v2/auth";
+    await page.route("**/api/auth/signin/google*", route => route.fulfill({ json: { url: google } }));
+    await page.route(google, route => route.fulfill({ contentType: "text/html", body: "" }));
+    await page.goto(start);
+
+    const [request] = await Promise.all([
+      page.waitForRequest(req => req.method() === "POST" && new URL(req.url()).pathname === "/api/auth/signin/google"),
+      page.getByRole("button", { name: button, exact: true }).first().click(),
+    ]);
+    const callback = new URLSearchParams(request.postData() ?? "").get("callbackUrl");
+    expect(callback).toBeTruthy();
+    expect(new URL(callback!, request.url()).href).toBe(new URL(expectedReturn, request.url()).href);
+    await expect(page).toHaveURL(google);
+  });
+}
 
 test("participants form teams, invite teammates, save a private draft, and publish with consent", async ({ page, context, browser }) => {
   test.setTimeout(90_000);
