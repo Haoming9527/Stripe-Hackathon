@@ -29,6 +29,7 @@ const googleProfile = {
   sub: "google-person",
   email: "builder@example.com",
   email_verified: true,
+  picture: "https://lh3.googleusercontent.com/example-avatar",
 };
 const input = () => ({
   user: { id: "new-profile", email: "builder@example.com" },
@@ -93,7 +94,7 @@ describe("Google authentication callbacks", () => {
     expect(await authOptions.callbacks!.signIn!(input())).toBe(true);
   });
 
-  it("persists the returning subject's verified address before issuing a session", async () => {
+  it("persists the returning subject's verified address and photo before issuing a session", async () => {
     fake.prisma.account.findUnique.mockResolvedValue({
       userId: "canonical-person",
     });
@@ -103,7 +104,11 @@ describe("Google authentication callbacks", () => {
     expect(await authOptions.callbacks!.signIn!(input())).toBe(true);
     expect(fake.prisma.user.update).toHaveBeenCalledWith({
       where: { id: "canonical-person" },
-      data: { email: googleProfile.email, emailVerified: expect.any(Date) },
+      data: {
+        email: googleProfile.email,
+        emailVerified: expect.any(Date),
+        image: googleProfile.picture,
+      },
     });
     expect(fake.prisma.participant.updateMany).not.toHaveBeenCalled();
   });
@@ -156,13 +161,14 @@ describe("Google sessions", () => {
         id: "canonical-person",
         email: "builder@example.com",
         name: "Builder",
+        image: googleProfile.picture,
       },
     });
     expect(await getViewer()).toEqual({
       id: "canonical-person",
       email: "builder@example.com",
       name: "Builder",
-      image: null,
+      image: googleProfile.picture,
       isAdmin: false,
     });
   });

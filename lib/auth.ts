@@ -76,12 +76,15 @@ export const authOptions: NextAuthOptions = {
         if (viewer && viewer.id !== existingAccount?.userId)
           return "/login?error=SessionConflict";
 
-        // Sessions derive roles from User.email. Persist Google's verified address
-        // before NextAuth issues a session for a returning Google subject.
+        // Refresh the returning account before NextAuth issues its session.
         if (existingAccount)
           await prisma.user.update({
             where: { id: existingAccount.userId },
-            data: { email, emailVerified: new Date() },
+            data: {
+              email,
+              emailVerified: new Date(),
+              image: google.picture ?? null,
+            },
           });
         return true;
       } catch {

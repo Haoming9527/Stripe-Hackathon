@@ -3,6 +3,7 @@ import { CommunityLogo } from "@/components/CommunityLogo";
 import { SiteNavigation } from "@/components/SiteNavigation";
 import { getViewer, missingAuthSettings } from "@/lib/auth";
 import { HeaderAuthButton } from "@/components/HeaderAuthButton";
+import { AccountAvatar } from "@/components/AccountAvatar";
 
 export async function SiteHeader() {
   const viewer = await getViewer();
@@ -20,9 +21,11 @@ export async function SiteHeader() {
         <div className="header-account">
           {viewer ? (
             <div className="account-menu">
-              <span className="account-avatar" title={viewer.email}>
-                {(viewer.name || viewer.email).slice(0, 1).toUpperCase()}
-              </span>
+              <AccountAvatar
+                email={viewer.email}
+                name={viewer.name}
+                image={viewer.image}
+              />
               <HeaderAuthButton signedIn />
             </div>
           ) : (
