@@ -85,6 +85,13 @@ export async function loadPortal(slug: string, requestedTab?: string) {
           orderBy: { createdAt: "asc" },
         })
       : [];
+  const hasCreditOffers =
+    tab === "credits"
+      ? offers.length > 0
+      : !!(await prisma.creditOffer.findFirst({
+          where: { hackathonId: event.id },
+          select: { id: true },
+        }));
 
   return {
     access: true as const,
@@ -98,7 +105,8 @@ export async function loadPortal(slug: string, requestedTab?: string) {
     teamsOpen,
     canManageTeam,
     offers,
-    tab,
+    hasCreditOffers,
+    tab: tab === "credits" && !hasCreditOffers ? "overview" : tab,
   };
 }
 

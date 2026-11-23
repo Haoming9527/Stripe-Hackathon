@@ -47,6 +47,7 @@ export default async function PortalPage({
         viewer={viewer}
         tab={tab}
         hasInvitations={data.invitations.length > 0}
+        hasCreditOffers={data.hasCreditOffers}
       />
       <section className="shell portal-content">
         {!data.participant && viewer.isAdmin && (

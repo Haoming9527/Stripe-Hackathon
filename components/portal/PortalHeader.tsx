@@ -8,10 +8,19 @@ export function PortalHeader({
   viewer,
   tab,
   hasInvitations,
-}: Pick<PortalData, "event" | "viewer" | "tab"> & { hasInvitations: boolean }) {
+  hasCreditOffers,
+}: Pick<PortalData, "event" | "viewer" | "tab" | "hasCreditOffers"> & {
+  hasInvitations: boolean;
+}) {
   const slug = event.slug;
   const base = `/hackathons/${slug}/portal`;
   const isDraftPreview = viewer.isAdmin && event.status === "DRAFT";
+  const tabs = [
+    { id: "overview", label: "Overview", icon: CalendarDays },
+    { id: "team", label: "Your team", icon: Users },
+    { id: "submission", label: "Your project", icon: Code2 },
+  ];
+  if (hasCreditOffers) tabs.push({ id: "credits", label: "Credits", icon: Gift });
   return (
     <section className="portal-header">
       <div className="shell">
@@ -38,12 +47,7 @@ export function PortalHeader({
           </span>
         </div>
         <nav className="tabs" aria-label="Participant portal">
-          {[
-            { id: "overview", label: "Overview", icon: CalendarDays },
-            { id: "team", label: "Your team", icon: Users },
-            { id: "submission", label: "Your project", icon: Code2 },
-            { id: "credits", label: "Credits", icon: Gift },
-          ].map((item) => (
+          {tabs.map((item) => (
             <Link
               href={`${base}?tab=${item.id}`}
               key={item.id}
