@@ -23,6 +23,7 @@ export const metadata: Metadata = {
   description:
     "Hackathons for the Stripe community in Singapore. Meet local builders, form a team, and share what you build.",
   icons: { icon: "/brand-icon.svg" },
+  verification: { google: "5aS9IjoK_08BQw_r5onqVHiprvE7xv1g764TEhPjnlM" },
 };
 
 export default function RootLayout({
