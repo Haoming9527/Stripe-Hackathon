@@ -1,0 +1,93 @@
+.policy-shell {
+  max-width: 1120px;
+}
+
+.policy-header {
+  border-block: 1px solid var(--border);
+  background: var(--surface);
+  padding-block: clamp(40px, 6vw, 76px);
+}
+
+.policy-header h1 {
+  font-size: clamp(36px, 6vw, 64px);
+  font-weight: 600;
+  letter-spacing: -0.05em;
+}
+
+.policy-intro {
+  max-width: 58ch;
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: clamp(16px, 2vw, 19px);
+}
+
+.policy-date {
+  margin-top: 20px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.policy-layout {
+  display: grid;
+  grid-template-columns: minmax(170px, 220px) minmax(0, 1fr);
+  gap: clamp(28px, 6vw, 76px);
+  align-items: start;
+  padding-block: clamp(32px, 5vw, 60px) clamp(52px, 8vw, 96px);
+}
+
+.policy-nav {
+  padding-inline-start: 16px;
+  border-inline-start: 2px solid var(--border);
+}
+
+.policy-nav p {
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.policy-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.policy-nav a:hover {
+  color: var(--purple);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.policy-copy {
+  max-width: 68ch;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.75;
+}
+
+.policy-copy section + section {
+  margin-top: 28px;
+  padding-top: 28px;
+  border-top: 1px solid var(--border);
+}
+
+.policy-copy h2 {
+  margin-bottom: 12px;
+  scroll-margin-top: 16px;
+  color: var(--navy);
+  font-size: clamp(21px, 2.5vw, 26px);
+}
+
+.policy-copy a {
+  color: var(--purple);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 700px) {
+  .policy-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

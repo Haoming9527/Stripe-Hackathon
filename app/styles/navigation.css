@@ -185,6 +185,8 @@
 
 .footer-inner {
   display: flex;
+  flex-wrap: wrap;
+  column-gap: 16px;
   justify-content: flex-end;
   max-width: none;
   padding-inline: clamp(12px, 1.1vw, 20px);

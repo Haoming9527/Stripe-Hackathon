@@ -41,6 +41,8 @@ export function SiteFooter() {
   return (
     <footer className="site-footer">
       <div className="shell footer-inner">
+        <Link href="/privacy">Privacy policy</Link>
+        <Link href="/terms">Terms of service</Link>
         <a
           href="https://docs.stripe.com/"
           target="_blank"
