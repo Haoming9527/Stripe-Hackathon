@@ -42,6 +42,18 @@ const sections: PolicySection[] = [
     ),
   },
   {
+    id: "website-analytics",
+    title: "Website analytics",
+    content: (
+      <p>
+        We use Vercel Web Analytics to understand how visitors use the
+        platform. It measures page views without using cookies and provides
+        aggregate information about visited pages, referral sources, approximate
+        location, browsers and devices.
+      </p>
+    ),
+  },
+  {
     id: "sharing-and-visibility",
     title: "Sharing and visibility",
     content: (
