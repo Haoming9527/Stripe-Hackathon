@@ -9,13 +9,15 @@ export function PortalHeader({
   viewer,
   tab,
   hasInvitations,
+  adminPreview,
   hasCreditOffers,
 }: Pick<PortalData, "event" | "viewer" | "tab" | "hasCreditOffers"> & {
   hasInvitations: boolean;
+  adminPreview: boolean;
 }) {
   const slug = event.slug;
   const base = `/hackathons/${slug}/portal`;
-  const isDraftPreview = viewer.isAdmin && event.status === "DRAFT";
+  const backToAdmin = adminPreview || (viewer.isAdmin && event.status === "DRAFT");
   const tabs = [
     { id: "overview", label: "Overview", icon: CalendarDays },
     { id: "team", label: "Your team", icon: Users },
@@ -26,11 +28,11 @@ export function PortalHeader({
     <section className="portal-header">
       <div className="shell">
         <Link
-          href={isDraftPreview ? `/admin/${event.id}` : `/hackathons/${slug}`}
+          href={backToAdmin ? `/admin/${event.id}` : `/hackathons/${slug}`}
           className="back-link"
         >
           <NavigationIcon><ArrowLeft size={15} /></NavigationIcon>
-          {isDraftPreview ? "Back to admin" : "Event gallery"}
+          {backToAdmin ? "Back to admin" : "Event gallery"}
         </Link>
         <div className="page-heading">
           <div>

@@ -40,9 +40,11 @@ export default async function PortalPage({
       </div>
     );
   const { tab } = data;
+  const adminPreview = viewer.isAdmin && !data.participant;
   return (
     <>
       <PortalHeader
+        adminPreview={adminPreview}
         event={event}
         viewer={viewer}
         tab={tab}
@@ -50,7 +52,7 @@ export default async function PortalPage({
         hasCreditOffers={data.hasCreditOffers}
       />
       <section className="shell portal-content">
-        {!data.participant && viewer.isAdmin && (
+        {adminPreview && (
           <div className="notice">
             You&rsquo;re previewing this portal as an administrator. Import your own
             email to participate, create a team, or receive credits.
