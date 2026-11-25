@@ -21,11 +21,11 @@ vi.mock("../lib/db", () => {
 });
 
 import { performMutation } from "../lib/domain";
-import { eventEditValues } from "../lib/admin-edit";
+import { eventEditValues, offerEditValues } from "../lib/admin-edit";
 import { joinInvitedHackathon } from "../lib/domain/participants";
 import { decryptVoucher } from "../lib/credits";
 import { authOptions } from "../lib/auth";
-import { findParticipant } from "../lib/queries";
+import { findParticipant, findPublicEvent, listPublicEvents } from "../lib/queries";
 
 const enabled = Boolean(process.env.TEST_DATABASE_URL);
 const suite = enabled ? describe : describe.skip;
@@ -143,6 +143,147 @@ suite("isolated PostgreSQL domain integration", () => {
     return db.project.findUniqueOrThrow({ where: { teamId: team.id } });
   }
 
+  it("publishes a new event, swaps track names without changing IDs, and closes its windows", async () => {
+    const source = await db.hackathon.findUniqueOrThrow({ where: { id: eventId } });
+    const fields = {
+      ...eventEditValues(source, []),
+      title: "Build weekend", slug: "build-weekend", status: "DRAFT",
+      tracks: JSON.stringify([{ name: "Payments" }, { name: "Climate" }, { name: "Unused" }]),
+      resources: JSON.stringify([{ title: "Guide", url: "https://example.test/guide" }]),
+      prizes: JSON.stringify([{ title: "First", description: "Gold medal" }]),
+    };
+    const created = await performMutation("event.save", data(fields), people[0]);
+    const event = await db.hackathon.findUniqueOrThrow({ where: { slug: fields.slug } });
+    expect(created.redirectTo).toBe(`/admin/${event.id}`);
+    expect(event).toMatchObject({ status: "DRAFT", resources: JSON.parse(fields.resources), prizes: JSON.parse(fields.prizes) });
+    expect(await findPublicEvent(event.slug)).toBeNull();
+    expect((await listPublicEvents()).map(item => item.id)).not.toContain(event.id);
+    const tracks = await db.track.findMany({ where: { hackathonId: event.id }, orderBy: { position: "asc" } });
+    const original = eventEditValues(event, tracks);
+    const updatedTracks = [
+      { id: tracks[0].id, name: tracks[1].name }, { id: tracks[1].id, name: tracks[0].name }, { name: "Open" },
+    ];
+    await performMutation("event.save", data({
+      ...original, id: event.id, original: JSON.stringify(original), status: "ACTIVE", tracks: JSON.stringify(updatedTracks),
+    }), people[0]);
+    const published = await findPublicEvent(event.slug);
+    expect(published?.tracks).toEqual([
+      { id: tracks[0].id, name: "Climate" }, { id: tracks[1].id, name: "Payments" }, { id: expect.any(String), name: "Open" },
+    ]);
+    expect(published).not.toHaveProperty("participants");
+    expect(await db.track.findUnique({ where: { id: tracks[2].id } })).toBeNull();
+    expect((await listPublicEvents()).map(item => item.id)).toContain(event.id);
+
+    await performMutation("event.windows", data({
+      hackathonId: event.id, original: JSON.stringify({ submissionsClosed: "", votingClosed: "" }), votingClosed: "on",
+    }), people[0]);
+    expect(await db.hackathon.findUniqueOrThrow({ where: { id: event.id } })).toMatchObject({
+      submissionsClosed: false, votingClosed: true,
+    });
+    await performMutation("event.status", data({
+      hackathonId: event.id, original: JSON.stringify({ status: "ACTIVE" }), status: "ENDED",
+    }), people[0]);
+    expect(await db.hackathon.findUniqueOrThrow({ where: { id: event.id } })).toMatchObject({
+      status: "ENDED", submissionsClosed: true, votingClosed: true,
+    });
+    expect(await joinInvitedHackathon(event.id, people[4])).toBeNull();
+  });
+
+  it("previews a participant CSV and links imported participants to existing accounts only on save", async () => {
+    const form = data({ hackathonId: eventId, preview: "on" });
+    const csv = `email,name\n${people[0].email},Registered\n${people[4].email},New account\nNEW@example.test,New invite\nnew@example.test,Repeated`;
+    form.set("file", new File([csv], "participants.csv", { type: "text/csv" }));
+    const preview = await performMutation("participants.import", form, people[0]);
+    expect(preview.message).toContain("2 new, 1 already registered, 1 duplicate, 0 invalid");
+    expect(await db.participant.count({ where: { hackathonId: eventId } })).toBe(4);
+    form.delete("preview");
+    await performMutation("participants.import", form, people[0]);
+    const added = await db.participant.findMany({ where: { hackathonId: eventId, normalizedEmail: { in: [people[4].email, "new@example.test"] } } });
+    expect(added).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "New account", userId: people[4].id }),
+      expect.objectContaining({ name: "New invite", userId: null }),
+    ]));
+    form.set("file", new File(["valid@example.test\ninvalid@"], "invalid.csv"));
+    await expect(performMutation("participants.import", form, people[0])).rejects.toThrow("Fix 1 invalid");
+    expect(await db.participant.count({ where: { hackathonId: eventId } })).toBe(6);
+  });
+
+  it("corrects an unclaimed participant's email and restores access to a revoked registration", async () => {
+    await performMutation("participants.create", data({ hackathonId: eventId, email: " First@Example.Test ", name: "First" }), people[0]);
+    const member = await db.participant.findFirstOrThrow({ where: { hackathonId: eventId, normalizedEmail: "first@example.test" } });
+    const registration = { hackathonId: eventId, participantId: member.id };
+    await performMutation("participants.update", data({
+      ...registration, original: JSON.stringify({ name: "First", email: member.normalizedEmail }), name: "Corrected", email: people[4].email,
+    }), people[0]);
+    expect(await findParticipant(eventId, people[4].id, people[4].email)).toMatchObject({ id: member.id, name: "Corrected", userId: people[4].id });
+    await performMutation("participants.remove", data(registration), people[0]);
+    expect(await findParticipant(eventId, people[4].id, people[4].email)).toBeNull();
+    await performMutation("participants.restore", data(registration), people[0]);
+    expect(await findParticipant(eventId, people[4].id, people[4].email)).toMatchObject({ id: member.id, revokedAt: null });
+  });
+
+  it("allows reinvitation after a decline and lets the owner dissolve an empty team", async () => {
+    const owner = people[1];
+    const teammate = people[2];
+    const team = await teamFor(owner);
+    const member = await db.participant.findFirstOrThrow({ where: { hackathonId: eventId, userId: teammate.id } });
+    const invite = () => performMutation("team.invite", data({ teamId: team.id, email: teammate.email }), owner);
+    await invite();
+    const invitation = await db.teamInvitation.findFirstOrThrow({ where: { teamId: team.id, participantId: member.id } });
+    const respond = (response: string) => performMutation("invitation.respond", data({ invitationId: invitation.id, response }), teammate);
+    await respond("decline");
+    expect(await db.teamInvitation.findUnique({ where: { id: invitation.id } })).toMatchObject({ status: "DECLINED" });
+    await invite();
+    await respond("accept");
+    expect(await db.participant.findUnique({ where: { id: member.id } })).toMatchObject({ teamId: team.id });
+    await expect(performMutation("team.leave", data({ teamId: team.id }), owner)).rejects.toThrow("Remove the other members");
+    await performMutation("team.remove", data({ teamId: team.id, participantId: member.id }), owner);
+    expect(await db.participant.findUnique({ where: { id: member.id } })).toMatchObject({ teamId: null });
+    await performMutation("team.leave", data({ teamId: team.id }), owner);
+    expect(await db.team.findUnique({ where: { id: team.id } })).toBeNull();
+  });
+
+  it("keeps a moderated project hidden when its team edits and restores it only on organizer request", async () => {
+    const contributor = people[1];
+    const project = await projectFor(contributor);
+    const track = await db.track.create({ data: { hackathonId: eventId, name: "Open" } });
+    const moderate = (status: string) => performMutation("project.moderate", data({ projectId: project.id, status }), people[0]);
+    await moderate("HIDDEN");
+    const hidden = await db.project.findUniqueOrThrow({ where: { id: project.id } });
+    expect(hidden.status).toBe("HIDDEN");
+    expect((await findPublicEvent("test-build"))?._count.projects).toBe(0);
+    const form = data({
+      hackathonId: eventId, teamId: hidden.teamId, name: "Refined demo", description: hidden.description,
+      videoUrl: hidden.videoUrl!, githubUrl: hidden.githubUrl!, expectedUpdatedAt: hidden.updatedAt.toISOString(),
+      trackIds: [track.id, track.id],
+    });
+    await performMutation("project.save", form, contributor);
+    const edited = await db.project.findUniqueOrThrow({ where: { id: hidden.id }, include: { tracks: true } });
+    expect(edited).toMatchObject({ status: "HIDDEN", publishedAt: project.publishedAt, name: "Refined demo", tracks: [{ trackId: track.id }] });
+    await moderate("SUBMITTED");
+    expect((await findPublicEvent("test-build"))?._count.projects).toBe(1);
+  });
+
+  it("saves credit offers in local event time and preserves existing inventory on repeat uploads", async () => {
+    await performMutation("credits.offer.save", data({ hackathonId: eventId, name: "Builder credits" }), people[0]);
+    const offer = await db.creditOffer.findFirstOrThrow({ where: { hackathonId: eventId } });
+    const original = offerEditValues(offer, "Asia/Singapore");
+    await performMutation("credits.offer.save", data({
+      ...original, hackathonId: eventId, id: offer.id, original: JSON.stringify(original),
+      expiresAt: "2030-06-21T08:00", redemptionUrl: "https://example.test/redeem",
+    }), people[0]);
+    expect(await db.creditOffer.findUniqueOrThrow({ where: { id: offer.id } })).toMatchObject({
+      expiresAt: new Date("2030-06-21T00:00:00Z"), redemptionUrl: "https://example.test/redeem",
+    });
+    const upload = data({ offerId: offer.id, codes: "UNIQUE-1\nUNIQUE-2\nUNIQUE-2", preview: "on" });
+    expect((await performMutation("credits.import", upload, people[0])).message).toContain("2 new vouchers, 0 already uploaded, 1 duplicate");
+    expect(await db.creditVoucher.count({ where: { offerId: offer.id } })).toBe(0);
+    upload.delete("preview");
+    await performMutation("credits.import", upload, people[0]);
+    expect((await performMutation("credits.import", upload, people[0])).message).toContain("0 unique vouchers uploaded");
+    expect(await db.creditVoucher.count({ where: { offerId: offer.id } })).toBe(2);
+  });
+
   it("allows a team to form below the minimum but requires the exact roster before publishing", async () => {
     await db.hackathon.update({ where: { id: eventId }, data: { minTeamSize: 2, maxTeamSize: 2 } });
     const team = await teamFor(people[1]);
@@ -152,6 +293,28 @@ suite("isolated PostgreSQL domain integration", () => {
     fields.videoUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
     await performMutation("project.save", data(fields), people[1]);
     expect(await db.project.findUnique({ where: { teamId: team.id } })).toMatchObject({ status: "SUBMITTED" });
+  });
+
+  it("rejects organizer limits that conflict with existing rosters, votes, or project tracks", async () => {
+    const project = await projectFor(people[1]);
+    await performMutation("vote.add", data({ projectId: project.id }), people[4]);
+    const event = await db.hackathon.update({ where: { id: eventId }, data: { maxTrackSelections: 2 } });
+    const tracks = await Promise.all(["Climate", "Payments"].map((name, position) =>
+      db.track.create({ data: { hackathonId: eventId, name, position } }),
+    ));
+    await db.projectTrack.createMany({ data: tracks.map(track => ({ trackId: track.id, projectId: project.id })) });
+    const original = eventEditValues(event, tracks);
+    const save = (fields: Record<string, string>) => performMutation("event.save", data({
+      ...original, id: eventId, original: JSON.stringify(original), title: "Must roll back", ...fields,
+    }), people[0]);
+    await expect(save({ minTeamSize: "2" })).rejects.toThrow("minimum exceeds");
+    await expect(save({ votesPerUser: "0" })).rejects.toThrow("votes already cast");
+    await expect(save({ maxTrackSelections: "1" })).rejects.toThrow("existing project's selections");
+    await expect(save({ tracks: "[]" })).rejects.toThrow("used by a project");
+    await expect(save({ resources: "[" })).rejects.toThrow("valid list");
+    const saved = await db.hackathon.findUniqueOrThrow({ where: { id: eventId } });
+    expect(saved).toMatchObject({ title: event.title, minTeamSize: 1, votesPerUser: 1, maxTrackSelections: 2 });
+    expect(await db.track.count({ where: { hackathonId: eventId } })).toBe(2);
   });
 
   it("only accepts one simultaneous invitation into the final team seat", async () => {
@@ -219,6 +382,16 @@ suite("isolated PostgreSQL domain integration", () => {
     await expect(performMutation("credits.assign", data({ offerId: offer.id }), people[0])).rejects.toThrow("No assignments were changed");
     expect(await db.creditVoucher.count({ where: { offerId: offer.id, participantId: { not: null } } })).toBe(0);
   }, 30_000);
+
+  it("assigns a voucher only to the selected participant when the same ID is submitted twice", async () => {
+    const offer = await db.creditOffer.create({ data: { hackathonId: eventId, name: "Selected students" } });
+    await performMutation("credits.import", data({ offerId: offer.id, codes: "CODE-A\nCODE-B" }), people[0]);
+    const member = await db.participant.findFirstOrThrow({ where: { hackathonId: eventId, userId: people[1].id } });
+    await performMutation("credits.assign", data({ offerId: offer.id, allocationMode: "selected", participantIds: [member.id, member.id] }), people[0]);
+    const assigned = await db.creditVoucher.findMany({ where: { offerId: offer.id, participantId: { not: null } } });
+    expect(assigned).toMatchObject([{ participantId: member.id }]);
+    expect(await db.creditVoucher.count({ where: { offerId: offer.id, participantId: null } })).toBe(1);
+  });
 
   it("keeps a returning Google identity and its revocation on the original registration", async () => {
     const person = people[1];

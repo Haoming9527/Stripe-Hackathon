@@ -15,7 +15,7 @@ vi.mock("next-auth", () => ({ getServerSession: fake.session }));
 vi.mock("@next-auth/prisma-adapter", () => ({ PrismaAdapter: () => ({}) }));
 vi.mock("@/lib/db", () => ({ prisma: fake.prisma, db: fake.prisma }));
 
-import { authOptions, getViewer } from "../lib/auth";
+import { authOptions, getViewer, requireUser } from "../lib/auth";
 import { manageParticipant } from "../lib/domain/participants";
 import { participant, serializable } from "../lib/domain/shared";
 import { findParticipant } from "../lib/queries";
@@ -60,6 +60,40 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("Google authentication callbacks", () => {
+  it.each([
+    ["/portal?tab=team", "https://community.example/portal?tab=team"],
+    ["https://community.example/events", "https://community.example/events"],
+    ["https://external.example/events", "https://community.example"],
+    ["//external.example", "https://community.example"],
+    ["invalid destination", "https://community.example"],
+  ])("resolves post-login destination %s", async (url, expected) => {
+    const baseUrl = "https://community.example";
+    expect(await authOptions.callbacks!.redirect!({ url, baseUrl })).toBe(expected);
+  });
+
+  it("sets session identity and administrator access from the stored user", async () => {
+    const session = { user: { id: "", email: "former@example.test", isAdmin: false }, expires: "2030-01-01" };
+    const user = { id: "stored-id", email: "admin@example.com", emailVerified: new Date() };
+    const result = await authOptions.callbacks!.session!({
+      session, user, token: {}, newSession: {}, trigger: "update",
+    });
+    expect(result.user).toMatchObject({ id: user.id, email: user.email, isAdmin: true });
+  });
+
+  it("verifies a new Google user's stored email before linking their invitations", async () => {
+    await authOptions.events!.signIn!({ ...input(), isNewUser: true });
+    expect(fake.prisma.user.update).toHaveBeenCalledWith({
+      where: { id: "new-profile", email: googleProfile.email }, data: { emailVerified: expect.any(Date) },
+    });
+    expect(fake.prisma.participant.updateMany).toHaveBeenCalledOnce();
+  });
+
+  it("requires login for a missing session and returns the authenticated viewer otherwise", async () => {
+    await expect(requireUser()).rejects.toMatchObject({ digest: expect.stringContaining("/login") });
+    fake.session.mockResolvedValue({ user: { id: "organizer", email: "Admin@Example.com" } });
+    await expect(requireUser()).resolves.toMatchObject({ id: "organizer", email: "admin@example.com", isAdmin: true });
+  });
+
   it("denies unverified Google profiles before reading participant or user data", async () => {
     const unverifiedProfile = { ...googleProfile, email_verified: false };
     const result = await authOptions.callbacks!.signIn!({

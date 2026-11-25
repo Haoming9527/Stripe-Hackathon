@@ -7,9 +7,15 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["tests/**/*.test.ts"],
+    include: ["tests/**/*.test.{ts,tsx}"],
     exclude: ["tests/e2e/**", "node_modules/**"],
     setupFiles: ["./tests/setup.ts"],
     restoreMocks: true,
+    coverage: {
+      provider: "v8",
+      include: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}", "lib/**/*.ts"],
+      reporter: [["text", { skipFull: true }], "json-summary", "lcov", "html"],
+      thresholds: { lines: 90, statements: 90, functions: 90, branches: 90 },
+    },
   },
 });

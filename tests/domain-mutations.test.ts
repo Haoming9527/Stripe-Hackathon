@@ -31,6 +31,9 @@ beforeEach(() => {
 });
 
 describe("server authorization", () => {
+  it("rejects unsupported form commands before changing data", async () => {
+    await expect(performMutation("unknown", new FormData(), viewer)).rejects.toThrow("not supported");
+  });
   it.each(["participants.create", "participants.update", "participants.remove", "participants.restore", "event.delete"])("protects %s from non-admins", async intent => {
     await expect(performMutation(intent, form({ hackathonId: "event-1" }), viewer)).rejects.toThrow("Administrator");
     expect(mocked.transaction).not.toHaveBeenCalled();

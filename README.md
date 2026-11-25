@@ -4,7 +4,7 @@ A multi-event platform with public project galleries, participant teams and subm
 
 ## Local setup
 
-Use Node.js 24 and npm. Copy `.env.example` to `.env` only for a new installation; preserve existing values when updating.
+Use Node.js 24.15 or newer in the 24.x series and npm. For a new installation, copy `.env.example` to `.env`. Keep your existing values when updating.
 
 ```sh
 npm install
@@ -110,12 +110,15 @@ The fixture utility is exported as `seedDemo(prisma)` from `prisma/demo-data.ts`
 
 ```sh
 npm test
+npm run test:coverage
 npm run lint
 npm run build
 npm run test:e2e
 ```
 
 Unit tests run without an external database. When `TEST_DATABASE_URL` is supplied, `npm test` also exercises PostgreSQL transactions, including concurrent team joins, vote quotas, and voucher allocation. The suite creates a random `hackathon_test_…` schema and deletes only that schema afterward. It never resets the application schema.
+
+For the full Vitest coverage check, set `TEST_DATABASE_URL` in your shell and run `npm run test:coverage`. It requires at least 90% coverage for each of lines, statements, functions, and branches across `app/`, `components/`, and `lib/`, including files the tests never import. Open `coverage/index.html` to see which lines still need tests.
 
 Browser tests require a prior production build and `TEST_DATABASE_URL`. Their runner creates another temporary schema, starts the app on port 3101, exercises guest/participant/admin behavior, and cleans up. It uses installed Chrome/Edge or Playwright Chromium; `PLAYWRIGHT_CHROMIUM_EXECUTABLE` can specify a browser executable. OAuth policies have automated coverage; a real Google smoke test needs configured credentials and registered callbacks.
 

@@ -108,7 +108,10 @@ async function stopProcess(child: ChildProcess | undefined) {
     await new Promise<void>((resolve) => {
       const killer = spawn("taskkill", ["/PID", String(child.pid), "/T", "/F"], { windowsHide: true, stdio: "ignore" });
       killer.once("error", () => { child.kill(); resolve(); });
-      killer.once("exit", () => resolve());
+      killer.once("exit", (code) => {
+        if (code !== 0 && child.exitCode === null && child.signalCode === null) child.kill();
+        resolve();
+      });
     });
   } else {
     child.kill("SIGTERM");

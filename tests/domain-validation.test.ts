@@ -41,6 +41,7 @@ describe("URL validation", () => {
     expect(() => githubUrl("https://github.com.evil.test/community/project")).toThrow();
     expect(() => githubUrl("https://github.com/community")).toThrow();
     expect(safeUrl("", "demo URL", true)).toBeNull();
+    expect(() => safeUrl("invalid URL", "demo URL")).toThrow("Enter a valid demo URL");
   });
 });
 
