@@ -41,11 +41,12 @@ export function admin(viewer: Viewer) {
   assert(viewer.isAdmin, "Administrator access is required.");
 }
 
-export async function eventById(
-  tx: Transaction,
-  id: string,
-): Promise<Hackathon> {
-  const event = await tx.hackathon.findUnique({ where: { id } });
+export function eventById(tx: Transaction, id: string): Promise<Hackathon>;
+export function eventById<S extends Prisma.HackathonSelect>(
+  tx: Transaction, id: string, select: S,
+): Promise<Prisma.HackathonGetPayload<{ select: S }>>;
+export async function eventById(tx: Transaction, id: string, select?: Prisma.HackathonSelect): Promise<object> {
+  const event = await tx.hackathon.findUnique({ where: { id }, select });
   assert(event, "This hackathon could not be found.");
   return event;
 }
@@ -68,7 +69,7 @@ export async function participant(
   return record;
 }
 
-export function teamChangesAllowed(event: Hackathon) {
+export function teamChangesAllowed(event: Pick<Hackathon, "status" | "submissionsClosed" | "submissionClosesAt">) {
   assert(
     event.status === "ACTIVE" &&
       !event.submissionsClosed &&

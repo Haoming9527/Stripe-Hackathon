@@ -7,7 +7,7 @@ import { CreditAllocationForm, VoucherImportForm } from "../ImportForms";
 import { eventDate } from "../format";
 import styles from "../styles";
 
-export async function Credits({ event }: { event: Hackathon }) {
+export async function Credits({ event }: { event: Pick<Hackathon, "id" | "timezone"> }) {
   const [offers, participants] = await Promise.all([
     prisma.creditOffer.findMany({
       where: { hackathonId: event.id },

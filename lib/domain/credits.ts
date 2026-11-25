@@ -42,7 +42,7 @@ export async function saveCreditOffer(
   const hackathonId = required(form, "hackathonId", "a hackathon");
   const id = field(form, "id", 100);
   await serializable(async (tx) => {
-    const event = await eventById(tx, hackathonId);
+    const event = await eventById(tx, hackathonId, { timezone: true });
     let values = form;
     if (id) {
       const existing = await tx.creditOffer.findUnique({ where: { id } });
@@ -69,8 +69,8 @@ export async function saveCreditOffer(
         ? parseLocalDateTime(expiry, event.timezone, "the credit expiry")
         : null,
     };
-    if (id) await tx.creditOffer.update({ where: { id }, data });
-    else await tx.creditOffer.create({ data });
+    if (id) await tx.creditOffer.update({ where: { id }, data, select: { id: true } });
+    else await tx.creditOffer.create({ data, select: { id: true } });
   });
   return { message: "Credit offer saved." };
 }
@@ -81,24 +81,21 @@ export async function importCredits(
 ): Promise<MutationResult> {
   admin(viewer);
   const offerId = required(form, "offerId", "a credit offer");
-  const offer = await db.creditOffer.findUnique({ where: { id: offerId } });
+  const offer = await db.creditOffer.findUnique({ where: { id: offerId }, select: { id: true } });
   assert(offer, "This credit offer could not be found.");
   const result = parseVoucherValues(await importText(form, "codes"));
   assert(result.values.length, "Add at least one code or redemption link.");
-  const rows = result.values.map((value) => ({
-    offerId,
-    fingerprint: voucherFingerprint(value),
-    encryptedValue: encryptVoucher(value),
-  }));
-  const existing = await db.creditVoucher.count({
-    where: { offerId, fingerprint: { in: rows.map((row) => row.fingerprint) } },
-  });
-  if (flag(form, "preview"))
+  if (flag(form, "preview")) {
+    const fingerprints = result.values.map(voucherFingerprint);
+    const existing = await db.creditVoucher.count({ where: { offerId, fingerprint: { in: fingerprints } } });
     return {
-      message: `Import preview: ${rows.length - existing} new vouchers, ${existing} already uploaded, ${result.duplicates} duplicate entries.`,
+      message: `Import preview: ${fingerprints.length - existing} new vouchers, ${existing} already uploaded, ${result.duplicates} duplicate entries.`,
     };
+  }
   const inserted = await db.creditVoucher.createMany({
-    data: rows,
+    data: result.values.map((value) => ({
+      offerId, fingerprint: voucherFingerprint(value), encryptedValue: encryptVoucher(value),
+    })),
     skipDuplicates: true,
   });
   return {
@@ -128,47 +125,41 @@ export async function assignCredits(
   );
   const preview = flag(form, "preview");
   const result = await serializable(async (tx) => {
-    const offer = await tx.creditOffer.findUnique({ where: { id: offerId } });
+    const offer = await tx.creditOffer.findUnique({
+      where: { id: offerId }, select: { hackathonId: true, expiresAt: true },
+    });
     assert(offer, "This credit offer could not be found.");
     assert(
       !offer.expiresAt || offer.expiresAt > new Date(),
       "This credit offer has expired.",
     );
-    const recipients = await tx.participant.findMany({
-      where: {
-        hackathonId: offer.hackathonId,
-        revokedAt: null,
-        ...(participantIds.length ? { id: { in: participantIds } } : {}),
-      },
-      orderBy: { createdAt: "asc" },
-    });
+    const eligible = {
+      hackathonId: offer.hackathonId, revokedAt: null,
+      ...(participantIds.length ? { id: { in: participantIds } } : {}),
+    };
+    const total = await tx.participant.count({ where: eligible });
     assert(
-      !participantIds.length || recipients.length === participantIds.length,
+      !participantIds.length || total === participantIds.length,
       "A selected participant is not eligible for this event.",
     );
-    const assigned = await tx.creditVoucher.findMany({
-      where: {
-        offerId,
-        participantId: { in: recipients.map((item) => item.id) },
-      },
-      select: { participantId: true },
+    const unassigned = { ...eligible, vouchers: { none: { offerId } } };
+    const inventory = { offerId, participantId: null, claimedAt: null };
+    if (preview) {
+      const needed = await tx.participant.count({ where: unassigned });
+      const available = await tx.creditVoucher.count({ where: inventory });
+      return { needed, available, assigned: total - needed };
+    }
+    const missing = await tx.participant.findMany({
+      where: unassigned, select: { id: true }, orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     });
-    const assignedIds = new Set(assigned.map((item) => item.participantId));
-    const missing = recipients.filter((item) => !assignedIds.has(item.id));
-    const available = await tx.creditVoucher.count({
-      where: { offerId, participantId: null, claimedAt: null },
-    });
-    if (preview)
-      return { needed: missing.length, available, assigned: assignedIds.size };
-    assert(
-      available >= missing.length,
-      `Not enough vouchers: ${missing.length} needed, ${available} available. No assignments were changed.`,
-    );
-    const vouchers = await tx.creditVoucher.findMany({
-      where: { offerId, participantId: null, claimedAt: null },
-      orderBy: { createdAt: "asc" },
+    const vouchers = missing.length ? await tx.creditVoucher.findMany({
+      where: inventory, select: { id: true }, orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       take: missing.length,
-    });
+    }) : [];
+    assert(
+      vouchers.length === missing.length,
+      `Not enough vouchers: ${missing.length} needed, ${vouchers.length} available. No assignments were changed.`,
+    );
     // Bulk updates keep large imports within the transaction timeout over a
     // remote database connection, while preserving all-or-nothing allocation.
     for (let offset = 0; offset < missing.length; offset += 1000) {
@@ -193,7 +184,7 @@ export async function assignCredits(
         "Inventory changed during allocation. No assignments were changed; try again.",
       );
     }
-    return { needed: missing.length, available, assigned: assignedIds.size };
+    return { needed: missing.length, assigned: total - missing.length, available: vouchers.length };
   });
   return {
     message: preview
@@ -210,7 +201,10 @@ export async function claimCredit(
   await serializable(async (tx) => {
     const voucher = await tx.creditVoucher.findUnique({
       where: { id },
-      include: { offer: true },
+      select: {
+        participantId: true, claimedAt: true, encryptedValue: true,
+        offer: { select: { hackathonId: true, expiresAt: true } },
+      },
     });
     assert(voucher?.participantId, "This voucher is not assigned to you.");
     const member = await participant(tx, voucher.offer.hackathonId, viewer);
@@ -218,7 +212,7 @@ export async function claimCredit(
       voucher.participantId === member.id,
       "This voucher is not assigned to you.",
     );
-    const event = await eventById(tx, voucher.offer.hackathonId);
+    const event = await eventById(tx, voucher.offer.hackathonId, { status: true });
     assert(
       event.status !== "DRAFT",
       "Credits become available when the hackathon is published.",
@@ -232,6 +226,7 @@ export async function claimCredit(
       await tx.creditVoucher.update({
         where: { id },
         data: { claimedAt: new Date() },
+        select: { id: true },
       });
     }
   });

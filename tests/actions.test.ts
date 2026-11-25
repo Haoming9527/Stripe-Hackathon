@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { revalidatePath, updateTag } from "next/cache";
+import { refresh, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { submitAction } from "../lib/actions";
 import { requireUser } from "../lib/auth";
@@ -8,7 +8,7 @@ import { DomainError } from "../lib/validation";
 
 vi.mock("next/cache", async (importOriginal) => ({
   ...await importOriginal<typeof import("next/cache")>(),
-  revalidatePath: vi.fn(),
+  refresh: vi.fn(),
   updateTag: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
@@ -18,9 +18,10 @@ vi.mock("../lib/domain", () => ({ performMutation: vi.fn() }));
 const viewer = { id: "u1", email: "owner@example.test", name: null, image: null, isAdmin: false };
 const previous = { success: false, message: "" };
 
-function submit(intent: string) {
+function submit(intent: string, publish = false) {
   const form = new FormData();
   form.set("intent", intent);
+  if (publish) form.set("publish", "true");
   return submitAction(previous, form);
 }
 
@@ -32,12 +33,12 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("form actions", () => {
-  it("returns the participant's success message and refreshes the application", async () => {
+  it("refreshes the participant's view and keeps shared data cached after a team change", async () => {
     vi.mocked(performMutation).mockResolvedValue({ message: "Team created." });
     const info = vi.spyOn(console, "info").mockImplementation(() => {});
     await expect(submit("team.create")).resolves.toEqual({ success: true, message: "Team created." });
     expect(performMutation).toHaveBeenCalledWith("team.create", expect.any(FormData), viewer);
-    expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
+    expect(refresh).toHaveBeenCalledOnce();
     expect(updateTag).not.toHaveBeenCalled();
     expect(info).not.toHaveBeenCalled();
   });
@@ -66,6 +67,16 @@ describe("form actions", () => {
     vi.spyOn(console, "info").mockImplementation(() => {});
     await submit(intent);
     expect(updateTag).toHaveBeenCalledWith("public-featured-event");
+    expect(updateTag).toHaveBeenCalledWith("public-event-directory");
+  });
+
+  it("expires directory project counts on publication and moderation, keeping them cached on draft saves", async () => {
+    vi.mocked(performMutation).mockResolvedValue({ message: "Saved." });
+    await submit("project.save");
+    expect(updateTag).not.toHaveBeenCalled();
+    await submit("project.save", true);
+    await submit("project.moderate");
+    expect(vi.mocked(updateTag).mock.calls).toEqual([["public-event-directory"], ["public-event-directory"]]);
   });
 
   it("returns bounded validation feedback and keeps arbitrary form input out of the audit log", async () => {
@@ -78,7 +89,7 @@ describe("form actions", () => {
       intent: "unknown",
     });
     expect(warn.mock.calls[0][0]).not.toContain(viewer.email);
-    expect(revalidatePath).not.toHaveBeenCalled();
+    expect(refresh).not.toHaveBeenCalled();
   });
 
   it("keeps unexpected service errors out of browser feedback and logs", async () => {
@@ -95,7 +106,7 @@ describe("form actions", () => {
     });
     expect(error.mock.calls[0][0]).not.toContain(failure);
     expect(updateTag).not.toHaveBeenCalled();
-    expect(revalidatePath).not.toHaveBeenCalled();
+    expect(refresh).not.toHaveBeenCalled();
   });
 
   it("requires an authenticated viewer before dispatching a mutation", async () => {

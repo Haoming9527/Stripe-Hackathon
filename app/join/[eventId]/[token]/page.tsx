@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { refresh } from "next/cache";
 import { getViewer, missingAuthSettings } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import {
@@ -28,20 +28,16 @@ export default async function InvitationPage({
 }) {
   const { eventId, token } = await params;
   if (!validParticipantInvite(eventId, token)) notFound();
-  const event = await prisma.hackathon.findUnique({
-    where: { id: eventId },
-    select: {
-      title: true,
-      status: true,
-      startsAt: true,
-      timezone: true,
-      location: true,
-    },
-  });
+  const [event, viewer, query] = await Promise.all([
+    prisma.hackathon.findUnique({
+      where: { id: eventId },
+      select: { title: true, status: true, startsAt: true, timezone: true, location: true },
+    }),
+    getViewer(),
+    searchParams,
+  ]);
   if (!event) notFound();
   const path = participantInvitePath(eventId);
-  const viewer = await getViewer();
-  const query = await searchParams;
 
   async function join() {
     "use server";
@@ -50,7 +46,7 @@ export default async function InvitationPage({
     if (!account) redirect(path);
     const slug = await joinInvitedHackathon(eventId, account);
     if (!slug) redirect(path + "?denied=1");
-    revalidatePath(`/admin/${eventId}`);
+    refresh();
     redirect(`/hackathons/${slug}/portal`);
   }
 

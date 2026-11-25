@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import styles from "../styles";
 import { Status } from "./Status";
 
-export async function Teams({ event }: { event: Hackathon }) {
+export async function Teams({ event }: { event: Pick<Hackathon, "id" | "minTeamSize" | "maxTeamSize"> }) {
   const teams = await prisma.team.findMany({
     where: { hackathonId: event.id },
     orderBy: { createdAt: "desc" },

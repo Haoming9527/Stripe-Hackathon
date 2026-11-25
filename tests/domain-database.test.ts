@@ -312,6 +312,8 @@ suite("isolated PostgreSQL domain integration", () => {
 
   it("rejects organizer limits that conflict with existing rosters, votes, or project tracks", async () => {
     const project = await projectFor(people[1]);
+    const otherTeam = await teamFor(people[2]);
+    await db.participant.updateMany({ where: { hackathonId: eventId, userId: people[3].id }, data: { teamId: otherTeam.id } });
     await performMutation("vote.add", data({ projectId: project.id }), people[4]);
     const event = await db.hackathon.update({ where: { id: eventId }, data: { maxTrackSelections: 2 } });
     const tracks = await Promise.all(["Climate", "Payments"].map((name, position) =>
@@ -322,6 +324,7 @@ suite("isolated PostgreSQL domain integration", () => {
     const save = (fields: Record<string, string>) => performMutation("event.save", data({
       ...original, id: eventId, original: JSON.stringify(original), title: "Must roll back", ...fields,
     }), people[0]);
+    await expect(save({ maxTeamSize: "1" })).rejects.toThrow("team limit is smaller");
     await expect(save({ minTeamSize: "2" })).rejects.toThrow("minimum exceeds");
     await expect(save({ votesPerUser: "0" })).rejects.toThrow("votes already cast");
     await expect(save({ maxTrackSelections: "1" })).rejects.toThrow("existing project's selections");
@@ -359,6 +362,25 @@ suite("isolated PostgreSQL domain integration", () => {
     expect(await db.vote.count({ where: { userId: visitor.id } })).toBe(1);
     await expect(performMutation("vote.add", data({ projectId: first.id }), people[1])).rejects.toThrow("own team's project");
   }, 30_000);
+
+  it("uses the current roster identity when checking a non-contributor's vote", async () => {
+    const project = await projectFor(people[1]);
+    const visitor = people[4];
+    const ballot = data({ projectId: project.id });
+    const rosterEntry = await db.participant.create({
+      data: { hackathonId: eventId, teamId: project.teamId, normalizedEmail: visitor.email },
+    });
+    await expect(performMutation("vote.add", ballot, visitor)).rejects.toThrow("own team's project");
+
+    const other = await db.user.create({ data: { email: "new-address@example.test" } });
+    await db.participant.update({ where: { id: rosterEntry.id }, data: { userId: other.id } });
+    await performMutation("vote.add", ballot, visitor);
+    expect(await db.vote.count({ where: { userId: visitor.id, projectId: project.id } })).toBe(1);
+
+    await db.project.update({ where: { id: project.id }, data: { status: "HIDDEN" } });
+    await performMutation("vote.withdraw", ballot, visitor);
+    expect(await db.vote.count({ where: { userId: visitor.id } })).toBe(0);
+  });
 
   it("locks submitted rosters and keeps drafts private until explicit consent", async () => {
     const team = await teamFor(people[1]);

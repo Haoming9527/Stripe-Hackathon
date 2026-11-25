@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AdminLiveUpdates } from "@/components/admin/AdminLiveUpdates";
 import { Suspense } from "react";
 import AdminLoading from "../loading";
 import { notFound } from "next/navigation";
@@ -13,6 +14,7 @@ import { Teams } from "@/components/admin/event/Teams";
 import { Projects } from "@/components/admin/event/Projects";
 import { Credits } from "@/components/admin/event/Credits";
 import { Settings } from "@/components/admin/event/Settings";
+import { adminHeaderFields, overviewFields } from "@/components/admin/event/types";
 
 export const dynamic = "force-dynamic";
 
@@ -25,41 +27,56 @@ const tabs = [
   "credits",
 ] as const;
 
+type AdminTab = typeof tabs[number];
+
+async function readTabEvent(id: string, tab: AdminTab) {
+  const where = { id };
+  if (tab === "overview") {
+    const event = await prisma.hackathon.findUnique({ where, select: overviewFields });
+    return { tab, event };
+  }
+  if (tab === "settings") {
+    const event = await prisma.hackathon.findUnique({
+      where, include: { tracks: { orderBy: { position: "asc" } } },
+    });
+    return { tab, event };
+  }
+  if (tab === "participants") {
+    const event = await prisma.hackathon.findUnique({
+      where, select: { ...adminHeaderFields, _count: { select: { participants: true } } },
+    });
+    return { tab, event };
+  }
+  const event = await prisma.hackathon.findUnique({
+    where, select: { ...adminHeaderFields, minTeamSize: true, maxTeamSize: true },
+  });
+  return { tab, event };
+}
+
 export default async function AdminEventPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; page?: string | string[] }>;
 }) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const tab = tabs.find((value) => value === query.tab) || "overview";
   return (
     <Suspense key={`${id}/${tab}`} fallback={<AdminLoading />}>
-      <AdminEventContent id={id} tab={tab} />
+      <AdminEventContent id={id} tab={tab} page={typeof query.page === "string" ? query.page : undefined} />
     </Suspense>
   );
 }
 
-async function AdminEventContent({ id, tab }: { id: string; tab: typeof tabs[number] }) {
+async function AdminEventContent({ id, tab, page }: { id: string; tab: AdminTab; page?: string }) {
   await requireAdmin();
-  const event = await prisma.hackathon.findUnique({
-    where: { id },
-    include: {
-      tracks: { orderBy: { position: "asc" } },
-      _count: {
-        select: {
-          participants: true,
-          teams: true,
-          projects: true,
-          votes: true,
-        },
-      },
-    },
-  });
-  if (!event) notFound();
+  const data = await readTabEvent(id, tab);
+  if (!data.event) notFound();
+  const { event } = data;
   return (
     <>
+      <AdminLiveUpdates />
       <Link href="/admin" className={styles.backLink}>
         ← All hackathons
       </Link>
@@ -103,12 +120,12 @@ async function AdminEventContent({ id, tab }: { id: string; tab: typeof tabs[num
           </Link>
         ))}
       </nav>
-      {tab === "overview" && <Overview event={event} />}
-      {tab === "settings" && <Settings event={event} />}
-      {tab === "participants" && <Participants event={event} />}
-      {tab === "teams" && <Teams event={event} />}
-      {tab === "projects" && <Projects event={event} />}
-      {tab === "credits" && <Credits event={event} />}
+      {data.tab === "overview" && <Overview event={data.event} />}
+      {data.tab === "settings" && <Settings event={data.event} />}
+      {data.tab === "participants" && <Participants event={data.event} requestedPage={page} />}
+      {data.tab === "teams" && <Teams event={data.event} />}
+      {data.tab === "projects" && <Projects event={data.event} />}
+      {data.tab === "credits" && <Credits event={data.event} />}
     </>
   );
 }

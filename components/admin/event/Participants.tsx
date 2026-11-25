@@ -1,4 +1,5 @@
 import type { Hackathon } from "@prisma/client";
+import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { CopyButton } from "@/components/CopyButton";
 import { participantInvitePath } from "@/lib/participant-invite";
@@ -8,10 +9,22 @@ import { ParticipantImportForm } from "../ImportForms";
 import { eventDate } from "../format";
 import styles from "../styles";
 
-export async function Participants({ event }: { event: Hackathon }) {
+const pageSize = 50;
+
+export async function Participants({ event, requestedPage }: {
+  event: Pick<Hackathon, "id" | "title" | "timezone"> & { _count: { participants: number } };
+  requestedPage?: string;
+}) {
+  const total = event._count.participants;
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const requested = Number(requestedPage);
+  const page = Number.isSafeInteger(requested) ? Math.max(1, Math.min(requested, pages)) : 1;
+  const offset = (page - 1) * pageSize;
   const participants = await prisma.participant.findMany({
     where: { hackathonId: event.id },
     orderBy: { normalizedEmail: "asc" },
+    skip: offset,
+    take: pageSize,
     include: {
       _count: { select: { vouchers: true, invitations: true } },
       team: { select: { name: true } },
@@ -49,9 +62,8 @@ export async function Participants({ event }: { event: Hackathon }) {
           <div className={styles.sectionBody}>
             <ParticipantImportForm
               hackathonId={event.id}
-              existingEmails={participants.map(
-                (participant) => participant.normalizedEmail,
-              )}
+              existingEmails={pages === 1 ? participants.map((row) => row.normalizedEmail) : undefined}
+              rosterSize={total}
             />
           </div>
         </section>
@@ -72,8 +84,7 @@ export async function Participants({ event }: { event: Hackathon }) {
           <div>
             <h2>Participant list</h2>
             <p>
-              {participants.length}{" "}
-              {participants.length === 1 ? "participant" : "participants"}
+              {total} {total === 1 ? "participant" : "participants"}
             </p>
           </div>
           <a
@@ -150,6 +161,29 @@ export async function Participants({ event }: { event: Hackathon }) {
             </tbody>
           </table>
         </div>
+        {pages > 1 && (
+          <nav className={styles.participantPages} aria-label="Participant pages">
+            <span>Page {page} of {pages}</span>
+            {page > 1 && (
+              <Link
+                href={`/admin/${event.id}?tab=participants&page=${page - 1}`}
+                className="button button-small button-secondary"
+                scroll={false}
+              >
+                Previous
+              </Link>
+            )}
+            {page < pages && (
+              <Link
+                href={`/admin/${event.id}?tab=participants&page=${page + 1}`}
+                className="button button-small button-secondary"
+                scroll={false}
+              >
+                Next
+              </Link>
+            )}
+          </nav>
+        )}
       </section>
     </>
   );

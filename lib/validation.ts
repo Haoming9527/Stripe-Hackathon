@@ -283,25 +283,33 @@ export function parseVoucherValues(text: string): {
   };
 }
 
+type VotingWindow = {
+  status: string;
+  votingClosed: boolean;
+  votingOpensAt: Date;
+  votingClosesAt: Date;
+};
+
+export function votingIsOpen(event: VotingWindow, now = new Date()): boolean {
+  return event.status === "ACTIVE" && !event.votingClosed && now >= event.votingOpensAt && now < event.votingClosesAt;
+}
+
+type SubmissionWindow = {
+  status: string;
+  submissionsClosed: boolean;
+  submissionOpensAt: Date;
+  submissionClosesAt: Date;
+};
+
+export function submissionIsOpen(event: SubmissionWindow, now = new Date()): boolean {
+  return event.status === "ACTIVE" && !event.submissionsClosed && now >= event.submissionOpensAt && now < event.submissionClosesAt;
+}
+
 export function windowIsOpen(
-  event: {
-    status: string;
-    submissionsClosed: boolean;
-    votingClosed: boolean;
-    submissionOpensAt: Date;
-    submissionClosesAt: Date;
-    votingOpensAt: Date;
-    votingClosesAt: Date;
-  },
+  event: VotingWindow & SubmissionWindow,
   kind: "submission" | "voting",
   now = new Date(),
 ): boolean {
-  if (event.status !== "ACTIVE") return false;
-  return kind === "submission"
-    ? !event.submissionsClosed &&
-        now >= event.submissionOpensAt &&
-        now < event.submissionClosesAt
-    : !event.votingClosed &&
-        now >= event.votingOpensAt &&
-        now < event.votingClosesAt;
+  if (kind === "voting") return votingIsOpen(event, now);
+  return submissionIsOpen(event, now);
 }

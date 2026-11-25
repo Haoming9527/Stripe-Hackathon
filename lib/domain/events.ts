@@ -166,34 +166,49 @@ async function persistEvent(tx: Prisma.TransactionClient, form: FormData, existi
     !existing || existing.status === "DRAFT" || status !== "DRAFT",
     "Published events cannot become drafts again. End the event instead.",
   );
-  if (existing) {
-    const teams = await tx.team.findMany({
-      where: { hackathonId: id },
-      include: { _count: { select: { members: true } } },
-    });
+  // Team, project and vote writes already enforce the current limits in serializable transactions.
+  if (existing && (maxTeamSize < existing.maxTeamSize || minTeamSize > existing.minTeamSize)) {
+    const [rosters] = await tx.$queryRaw<{ aboveMaximum: boolean; belowLockedMinimum: boolean }[]>`
+      SELECT COALESCE(BOOL_OR(size > ${maxTeamSize}), false) AS "aboveMaximum",
+             COALESCE(BOOL_OR(size < ${minTeamSize} AND "rosterLockedAt" IS NOT NULL), false) AS "belowLockedMinimum"
+      FROM (
+        SELECT team."rosterLockedAt", COUNT(member."teamId") AS size
+        FROM "Team" AS team
+        LEFT JOIN "Participant" AS member ON member."teamId" = team.id
+        WHERE team."hackathonId" = ${id}
+        GROUP BY team.id
+      ) AS team_sizes
+    `;
     assert(
-      teams.every((team) => team._count.members <= maxTeamSize),
+      !rosters.aboveMaximum,
       "The team limit is smaller than an existing team. Keep the current limit or increase it.",
     );
-    assert(teams.every(team => !team.rosterLockedAt || team._count.members >= minTeamSize),
+    assert(!rosters.belowLockedMinimum,
       "The minimum exceeds the size of a team whose roster is already locked.");
-    const ballots = await tx.vote.groupBy({
+  }
+  if (existing && votesPerUser < existing.votesPerUser) {
+    const overLimit = await tx.vote.groupBy({
       by: ["userId"],
       where: { hackathonId: id },
-      _count: { id: true },
+      having: { id: { _count: { gt: votesPerUser } } },
+      orderBy: { userId: "asc" },
+      take: 1,
     });
     assert(
-      ballots.every((ballot) => ballot._count.id <= votesPerUser),
+      overLimit.length === 0,
       "The vote allowance is smaller than votes already cast. Keep the current allowance or increase it.",
     );
-    const projects = await tx.project.findMany({
-      where: { hackathonId: id },
-      include: { _count: { select: { tracks: true } } },
+  }
+  if (existing && maxTrackSelections < existing.maxTrackSelections) {
+    const overLimit = await tx.projectTrack.groupBy({
+      by: ["projectId"],
+      where: { project: { hackathonId: id } },
+      having: { trackId: { _count: { gt: maxTrackSelections } } },
+      orderBy: { projectId: "asc" },
+      take: 1,
     });
     assert(
-      projects.every(
-        (project) => project._count.tracks <= maxTrackSelections,
-      ),
+      overLimit.length === 0,
       "The track limit is smaller than an existing project's selections.",
     );
   }

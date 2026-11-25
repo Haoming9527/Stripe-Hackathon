@@ -7,9 +7,9 @@ import { eventDate } from "../format";
 import styles from "../styles";
 import { LiveEditor } from "../LiveEditor";
 import { Status } from "./Status";
-import type { EventDetails } from "./types";
+import type { OverviewEvent } from "./types";
 
-export function Overview({ event }: { event: EventDetails }) {
+export function Overview({ event }: { event: OverviewEvent }) {
   const submissionsOpen = windowIsOpen(event, "submission");
   const votingOpen = windowIsOpen(event, "voting");
   const statusValues = JSON.stringify({ status: event.status });
@@ -67,8 +67,8 @@ export function Overview({ event }: { event: EventDetails }) {
               <div>
                 <p className={styles.subtle}>Tracks</p>
                 <strong style={{ fontSize: 14 }}>
-                  {event.tracks.length
-                    ? `${event.tracks.length} tracks · select up to ${event.maxTrackSelections}`
+                  {event._count.tracks
+                    ? `${event._count.tracks} tracks · select up to ${event.maxTrackSelections}`
                     : "No tracks"}
                 </strong>
               </div>

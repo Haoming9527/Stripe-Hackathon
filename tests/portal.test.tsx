@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { loadPortal, type PortalData } from "@/components/portal/data";
+import { loadPortal } from "@/components/portal/data";
 import { PortalHeader } from "@/components/portal/PortalHeader";
 import { OverviewTab } from "@/components/portal/OverviewTab";
 import { TeamTab } from "@/components/portal/TeamTab";
@@ -14,6 +14,7 @@ const db = vi.hoisted(() => ({
   participant: vi.fn(),
   team: vi.fn(),
   invitations: vi.fn(),
+  firstInvite: vi.fn(),
   offers: vi.fn(),
   firstOffer: vi.fn(),
   decrypt: vi.fn(),
@@ -22,7 +23,7 @@ vi.mock("@/lib/db", () => ({
   prisma: {
     hackathon: { findUnique: db.event },
     team: { findUnique: db.team },
-    teamInvitation: { findMany: db.invitations },
+    teamInvitation: { findMany: db.invitations, findFirst: db.firstInvite },
     creditOffer: { findMany: db.offers, findFirst: db.firstOffer },
   },
 }));
@@ -51,7 +52,7 @@ const invite = {
   createdAt: now,
   updatedAt: now,
 };
-const team: NonNullable<PortalData["team"]> = {
+const team = {
   id: "team",
   hackathonId: adminEvent.id,
   name: "Green team",
@@ -81,6 +82,7 @@ const incoming = {
 const base = {
   event: adminEvent,
   team,
+  hasTeam: true,
   now,
   viewer,
   participant,
@@ -122,15 +124,39 @@ describe("participant portal access and data", () => {
     expect(db.offers).not.toHaveBeenCalled();
   });
 
-  it("loads an owner's team and limits credit queries to their registration", async () => {
+  it("loads the roster without project data and starts the credit badge lookup independently", async () => {
+    const pending = Promise.withResolvers<typeof team>();
+    db.team.mockReturnValue(pending.promise);
+    const result = loadPortal(adminEvent.slug, "team");
+    await vi.waitFor(() => expect(db.firstOffer).toHaveBeenCalledOnce());
+    expect(db.team).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: team.id, hackathonId: adminEvent.id, members: { some: { id: participant.id, revokedAt: null } } },
+    }));
+    expect(db.team.mock.calls[0][0].select).not.toHaveProperty("project");
+    expect(db.event.mock.calls[0][0].select).toMatchObject({ tracks: false, schedule: false });
+    pending.resolve(team);
+    expect(await result).toMatchObject({ team, invitations: [], hasInvitations: false });
+    expect(db.invitations).not.toHaveBeenCalled();
+  });
+
+  it("reads project tracks without team rosters on the submission tab", async () => {
+    db.team.mockResolvedValue({ id: team.id, name: team.name, project: null });
+    expect(await loadPortal(adminEvent.slug, "submission")).toMatchObject({
+      tab: "submission", submissionTeam: { id: team.id, name: team.name, project: null },
+    });
+    expect(db.event.mock.calls[0][0].select.tracks.orderBy).toEqual({ position: "asc" });
+    expect(db.team.mock.calls[0][0].select.project).toBeDefined();
+    expect(db.team.mock.calls[0][0].select).not.toHaveProperty("members");
+  });
+
+  it("limits credit queries to the registration and skips the roster", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(now);
     try {
       db.offers.mockResolvedValue([{ id: "offer" }]);
       expect(await loadPortal(adminEvent.slug, "credits")).toMatchObject({
-        team,
+        team: null,
         tab: "credits",
-        canManageTeam: true,
         submissionsOpen: true,
         hasCreditOffers: true,
       });
@@ -141,16 +167,19 @@ describe("participant portal access and data", () => {
         }),
       );
       expect(db.invitations).not.toHaveBeenCalled();
+      expect(db.team).not.toHaveBeenCalled();
+      expect(db.firstOffer).not.toHaveBeenCalled();
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it("loads invitations for teamless participants and falls back from unavailable tabs", async () => {
+  it("checks only for a pending invitation on overview and handles the credits fallback", async () => {
     db.participant.mockResolvedValue({ ...participant, teamId: null });
+    db.firstInvite.mockResolvedValue({ id: invite.id });
     expect(await loadPortal(adminEvent.slug, "credits")).toMatchObject({
       tab: "overview",
-      invitations: [incoming],
+      hasInvitations: true,
     });
     db.firstOffer.mockResolvedValue({ id: "o1" });
     expect(await loadPortal(adminEvent.slug, "unknown")).toMatchObject({
@@ -159,6 +188,15 @@ describe("participant portal access and data", () => {
       canManageTeam: false,
     });
     expect(db.team).not.toHaveBeenCalled();
+    expect(db.invitations).not.toHaveBeenCalled();
+    expect(db.firstInvite).toHaveBeenCalledWith(expect.objectContaining({ select: { id: true } }));
+  });
+
+  it("shows incoming team invitations if the registered team has since dissolved", async () => {
+    db.team.mockResolvedValue(null);
+    expect(await loadPortal(adminEvent.slug, "team")).toMatchObject({
+      team: null, invitations: [incoming], hasInvitations: true,
+    });
   });
 
   it("allows administrators to preview a draft without membership", async () => {
@@ -209,7 +247,7 @@ describe("participant portal views", () => {
       <OverviewTab
         {...base}
         event={{ ...event, schedule: [], resources: [], prizes: [] }}
-        team={null}
+        hasTeam={false}
         now={event.createdAt}
         submissionsOpen={false}
       />,

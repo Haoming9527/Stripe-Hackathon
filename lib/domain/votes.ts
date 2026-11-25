@@ -1,6 +1,7 @@
 import "server-only";
 import type { Viewer } from "../types";
-import { assert, normalizeEmail, required, windowIsOpen } from "../validation";
+import { votingMemberFilter } from "../queries";
+import { assert, required, votingIsOpen } from "../validation";
 import { serializable, type MutationResult } from "./shared";
 
 export async function setVote(
@@ -10,13 +11,23 @@ export async function setVote(
 ): Promise<MutationResult> {
   const projectId = required(form, "projectId", "a project");
   await serializable(async (tx) => {
+    const viewerVotes = { select: { votes: { where: { userId: viewer.id } } } };
     const project = await tx.project.findUnique({
       where: { id: projectId },
-      include: {
-        hackathon: true,
-        team: {
-          include: {
-            members: { select: { userId: true, normalizedEmail: true } },
+      select: {
+        status: true,
+        hackathonId: true,
+        teamId: !withdraw,
+        contributorIds: !withdraw,
+        _count: withdraw ? false : viewerVotes,
+        hackathon: {
+          select: {
+            status: true,
+            votingClosed: true,
+            votingOpensAt: true,
+            votingClosesAt: true,
+            votesPerUser: !withdraw,
+            _count: withdraw ? false : viewerVotes,
           },
         },
       },
@@ -26,7 +37,7 @@ export async function setVote(
       "This project is not available for voting.",
     );
     assert(
-      windowIsOpen(project.hackathon, "voting"),
+      votingIsOpen(project.hackathon),
       "Voting is currently closed.",
     );
     if (withdraw) {
@@ -39,22 +50,14 @@ export async function setVote(
     );
     const ownProject =
       project.contributorIds.includes(viewer.id) ||
-      project.team.members.some(
-        (member) =>
-          member.userId === viewer.id ||
-          (member.userId === null &&
-            member.normalizedEmail === normalizeEmail(viewer.email)),
-      );
+      await tx.participant.findFirst({
+        where: { teamId: project.teamId, ...votingMemberFilter(viewer) },
+        select: { id: true },
+      });
     assert(!ownProject, "You cannot vote for your own team's project.");
-    const existing = await tx.vote.findUnique({
-      where: { userId_projectId: { userId: viewer.id, projectId } },
-    });
-    if (existing) return;
-    const count = await tx.vote.count({
-      where: { hackathonId: project.hackathonId, userId: viewer.id },
-    });
+    if (project._count.votes > 0) return;
     assert(
-      count < project.hackathon.votesPerUser,
+      project.hackathon._count.votes < project.hackathon.votesPerUser,
       "You have used all your votes for this hackathon. Remove a vote to choose another project.",
     );
     await tx.vote.createMany({

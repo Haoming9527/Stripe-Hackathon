@@ -7,7 +7,7 @@ import {
   githubUrl,
   required,
   safeUrl,
-  windowIsOpen,
+  submissionIsOpen,
 } from "../validation";
 import {
   admin,
@@ -40,9 +40,12 @@ export async function saveProject(
   assert(trackIds.length <= 100, "Too many tracks were selected.");
   const publish = flag(form, "publish");
   const saved = await serializable(async (tx) => {
-    const event = await eventById(tx, hackathonId);
+    const event = await eventById(tx, hackathonId, {
+      status: true, submissionsClosed: true, submissionOpensAt: true, submissionClosesAt: true,
+      minTeamSize: true, maxTeamSize: true, maxTrackSelections: true,
+    });
     assert(
-      windowIsOpen(event, "submission"),
+      submissionIsOpen(event),
       "Submissions are currently closed.",
     );
     const member = await participant(tx, hackathonId, viewer);
@@ -52,7 +55,11 @@ export async function saveProject(
     );
     const team = await tx.team.findUnique({
       where: { id: member.teamId },
-      include: { project: true, members: true },
+      select: {
+        id: true, hackathonId: true,
+        _count: { select: { members: true } },
+        project: { select: { updatedAt: true, publishedAt: true, status: true, consentAt: true } },
+      },
     });
     assert(
       team && team.hackathonId === hackathonId,
@@ -64,7 +71,7 @@ export async function saveProject(
       "Your team or project changed since you opened this form. Copy your edits and reload the page to review the latest version.",
     );
     assert(
-      team.members.length <= event.maxTeamSize,
+      team._count.members <= event.maxTeamSize,
       "Your team exceeds the event's size limit.",
     );
     const isPublic =
@@ -74,7 +81,7 @@ export async function saveProject(
     let videoUrl = video;
     let repositoryUrl = github;
     if (isPublic) {
-      assert(team.members.length >= (event.minTeamSize ?? 1),
+      assert(team._count.members >= (event.minTeamSize ?? 1),
         `Your team needs at least ${event.minTeamSize} members to publish.`);
       assert(description, "Describe what your project does.");
       videoUrl = safeUrl(video, "video URL")!;
@@ -88,21 +95,21 @@ export async function saveProject(
       if (video) videoUrl = safeUrl(video, "video URL")!;
       if (github) repositoryUrl = githubUrl(github);
     }
-    const tracks = await tx.track.findMany({
-      where: { hackathonId },
-      select: { id: true },
-    });
-    assert(
-      trackIds.every((id) => tracks.some((track) => track.id === id)),
-      "A selected track does not belong to this hackathon.",
-    );
+    if (trackIds.length) {
+      const selectedTracks = await tx.track.count({ where: { hackathonId, id: { in: trackIds } } });
+      assert(selectedTracks === trackIds.length, "A selected track does not belong to this hackathon.");
+    } else if (isPublic) {
+      const track = await tx.track.findFirst({ where: { hackathonId }, select: { id: true } });
+      assert(!track, "Choose at least one track.");
+    }
     assert(
       trackIds.length <= event.maxTrackSelections,
       `Choose at most ${event.maxTrackSelections} tracks.`,
     );
-    if (isPublic && tracks.length)
-      assert(trackIds.length >= 1, "Choose at least one track.");
     const firstPublish = isPublic && !team.project?.publishedAt;
+    const contributors = firstPublish
+      ? await tx.participant.findMany({ where: { teamId, userId: { not: null } }, select: { userId: true } })
+      : [];
     const now = nextProjectTimestamp(team.project?.updatedAt);
     const data = {
       name,
@@ -122,7 +129,7 @@ export async function saveProject(
             publishedAt: now,
             consentAt: now,
             consentUserId: viewer.id,
-            contributorIds: team.members
+            contributorIds: contributors
               .map((item) => item.userId)
               .filter((value): value is string => Boolean(value)),
           }
@@ -132,6 +139,7 @@ export async function saveProject(
       where: { teamId: team.id },
       create: { ...data, hackathonId, teamId: team.id },
       update: data,
+      select: { id: true, status: true },
     });
     await tx.projectTrack.deleteMany({ where: { projectId: project.id } });
     if (trackIds.length)
@@ -171,7 +179,9 @@ export async function moderateProject(
     "Choose whether to hide or restore the project.",
   );
   await serializable(async (tx) => {
-    const project = await tx.project.findUnique({ where: { id } });
+    const project = await tx.project.findUnique({
+      where: { id }, select: { publishedAt: true, consentAt: true, updatedAt: true },
+    });
     assert(
       project?.publishedAt && project.consentAt,
       "Only projects already submitted by participants can be moderated.",
@@ -179,6 +189,7 @@ export async function moderateProject(
     await tx.project.update({
       where: { id },
       data: { status, updatedAt: nextProjectTimestamp(project.updatedAt) },
+      select: { id: true },
     });
   });
   return {

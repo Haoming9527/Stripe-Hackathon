@@ -38,5 +38,5 @@ export const adminEvent: EventDetails = {
       position: 0,
     },
   ],
-  _count: { participants: 12, teams: 4, projects: 2, votes: 7 },
+  _count: { participants: 12, teams: 4, projects: 2, votes: 7, tracks: 1 },
 };

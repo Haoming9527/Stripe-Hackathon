@@ -141,6 +141,7 @@ model Participant {
 
   @@unique([hackathonId, normalizedEmail])
   @@unique([hackathonId, userId])
+  @@index([normalizedEmail, userId])
   @@index([teamId])
 }
 
@@ -171,6 +172,7 @@ model TeamInvitation {
   participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
 
   @@unique([teamId, participantId])
+  @@index([participantId, status])
 }
 
 model Project {
@@ -218,6 +220,7 @@ model Vote {
 
   @@unique([userId, projectId])
   @@index([hackathonId, userId])
+  @@index([projectId])
 }
 
 model CreditOffer {
@@ -233,6 +236,8 @@ model CreditOffer {
   createdAt      DateTime @default(now())
   hackathon      Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
   vouchers       CreditVoucher[]
+
+  @@index([hackathonId, createdAt])
 }
 
 model CreditVoucher {
@@ -250,4 +255,5 @@ model CreditVoucher {
   @@unique([offerId, fingerprint])
   @@unique([offerId, participantId])
   @@index([offerId, participantId])
+  @@index([participantId])
 }

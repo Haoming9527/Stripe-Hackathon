@@ -4,7 +4,7 @@ import { LiveEditor } from "../LiveEditor";
 import styles from "../styles";
 import type { EventDetails } from "./types";
 
-export function Settings({ event }: { event: EventDetails }) {
+export function Settings({ event }: { event: Omit<EventDetails, "_count"> }) {
   return (
     <>
       <LiveEditor version={event.updatedAt.toISOString()}><EventForm event={event} /></LiveEditor>

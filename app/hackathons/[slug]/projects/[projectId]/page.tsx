@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getViewer } from "@/lib/auth";
-import { publicProjectSelect, findPublicEvent } from "@/lib/queries";
+import { publicProjectSelect, votingMemberFilter } from "@/lib/queries";
+import { votingIsOpen } from "@/lib/validation";
 import { VideoPreview } from "@/components/VideoPreview";
 import { CopyButton } from "@/components/CopyButton";
 import { ProjectVote } from "@/components/ProjectCard";
@@ -17,16 +18,32 @@ export default async function ProjectPage({
   params: Promise<{ slug: string; projectId: string }>;
 }) {
   const { slug, projectId } = await params;
-  const [event, viewer] = await Promise.all([
-    findPublicEvent(slug),
+  const [project, viewer] = await Promise.all([
+    prisma.project.findFirst({
+      where: {
+        id: projectId,
+        status: "SUBMITTED",
+        hackathon: { slug, status: { not: "DRAFT" } },
+      },
+      select: {
+        ...publicProjectSelect,
+        hackathon: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            votingClosed: true,
+            votingOpensAt: true,
+            votingClosesAt: true,
+            votesPerUser: true,
+          },
+        },
+      },
+    }),
     getViewer(),
   ]);
-  if (!event) notFound();
-  const project = await prisma.project.findFirst({
-    where: { id: projectId, hackathonId: event.id, status: "SUBMITTED" },
-    select: publicProjectSelect,
-  });
   if (!project) notFound();
+  const event = project.hackathon;
   const [votes, own] = await Promise.all([
     viewer
       ? prisma.vote.findMany({
@@ -41,28 +58,14 @@ export default async function ProjectPage({
             OR: [
               { contributorIds: { has: viewer.id } },
               {
-                team: {
-                  members: {
-                    some: {
-                      OR: [
-                        { userId: viewer.id },
-                        { userId: null, normalizedEmail: viewer.email },
-                      ],
-                    },
-                  },
-                },
+                team: { members: { some: votingMemberFilter(viewer) } },
               },
             ],
           },
         })
       : 0,
   ]);
-  const now = new Date();
-  const open =
-    event.status === "ACTIVE" &&
-    !event.votingClosed &&
-    now >= event.votingOpensAt &&
-    now < event.votingClosesAt;
+  const open = votingIsOpen(event);
   return (
     <section className="shell project-profile">
       <Link href={`/hackathons/${slug}`} className="back-link">

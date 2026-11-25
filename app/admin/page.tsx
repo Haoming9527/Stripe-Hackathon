@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AdminLiveUpdates } from "@/components/admin/AdminLiveUpdates";
 import { prisma } from "@/lib/db";
 import styles from "@/components/admin/styles";
 import { requireAdmin } from "@/components/admin/access";
@@ -10,7 +11,10 @@ export default async function AdminHome() {
   await requireAdmin();
   const events = await prisma.hackathon.findMany({
     orderBy: { createdAt: "desc" },
-    include: { _count: { select: { participants: true, projects: true } } },
+    select: {
+      id: true, title: true, tagline: true, location: true, status: true,
+      startsAt: true, timezone: true, _count: { select: { participants: true, projects: true } },
+    },
   });
   const totals = events.reduce(
     (acc, event) => ({
@@ -21,6 +25,7 @@ export default async function AdminHome() {
   );
   return (
     <>
+      <AdminLiveUpdates />
       <div className={styles.topline}>
         <h1>Hackathons</h1>
         <Link className="button button-primary" href="/admin/new">

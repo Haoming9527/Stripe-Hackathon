@@ -1,6 +1,14 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { normalizeIdentityEmail } from "@/lib/auth-policy";
+import type { Viewer } from "@/lib/types";
+
+/** A project's own team includes registered accounts and unclaimed roster emails. */
+export function votingMemberFilter(viewer: Viewer): Prisma.ParticipantWhereInput {
+  return {
+    OR: [{ userId: viewer.id }, { userId: null, normalizedEmail: normalizeIdentityEmail(viewer.email) }],
+  };
+}
 
 // Explicit public projections exclude participant emails, vouchers and totals.
 export const publicProjectSelect = {
@@ -20,16 +28,21 @@ export type PublicProject = Prisma.ProjectGetPayload<{
   select: typeof publicProjectSelect;
 }>;
 
-export const publicEventSelect = {
+const directoryEventSelect = {
   id: true,
   slug: true,
   title: true,
   tagline: true,
   startsAt: true,
-  endsAt: true,
   status: true,
   location: true,
   timezone: true,
+  _count: { select: { projects: { where: { status: "SUBMITTED" } } } },
+} satisfies Prisma.HackathonSelect;
+
+export const publicEventSelect = {
+  ...directoryEventSelect,
+  endsAt: true,
   votesPerUser: true,
   votingOpensAt: true,
   votingClosesAt: true,
@@ -38,13 +51,12 @@ export const publicEventSelect = {
     select: { id: true, name: true },
     orderBy: { position: "asc" as const },
   },
-  _count: { select: { projects: { where: { status: "SUBMITTED" as const } } } },
 } satisfies Prisma.HackathonSelect;
 
 export async function listPublicEvents() {
   return prisma.hackathon.findMany({
     where: { status: { not: "DRAFT" } },
-    select: publicEventSelect,
+    select: directoryEventSelect,
     orderBy: [{ startsAt: "desc" }],
   });
 }

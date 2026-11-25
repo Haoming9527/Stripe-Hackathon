@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { Upload } from "lucide-react";
 import { ActionForm } from "@/components/ActionForm";
 import { parseParticipants, parseVoucherValues } from "@/lib/validation";
+import { countImportedEmails } from "./count-imported-emails";
 import styles from "./styles";
 
 async function readImport(
@@ -92,9 +93,11 @@ function ImportFileControl({
 export function ParticipantImportForm({
   hackathonId,
   existingEmails,
+  rosterSize,
 }: {
   hackathonId: string;
-  existingEmails: string[];
+  existingEmails?: string[];
+  rosterSize?: number;
 }) {
   const [text, setText] = useState("");
   const [fileError, setFileError] = useState("");
@@ -115,10 +118,34 @@ export function ParticipantImportForm({
       };
     }
   }, [text]);
-  const existing = new Set(existingEmails);
-  const alreadyAdded = preview.participants.filter((participant) =>
-    existing.has(participant.normalizedEmail),
-  ).length;
+  const [lookup, setLookup] = useState<{
+    preview: typeof preview;
+    rosterSize?: number;
+    hackathonId: string;
+    count: number | null;
+  }>();
+  const localAddresses = useMemo(() => existingEmails && new Set(existingEmails), [existingEmails]);
+  useEffect(() => {
+    if (localAddresses || !preview.participants.length) return;
+    let current = true;
+    const timer = window.setTimeout(async () => {
+      const emails = preview.participants.map((row) => row.normalizedEmail);
+      const count = await countImportedEmails(hackathonId, emails).catch(() => null);
+      if (current) setLookup({ preview, rosterSize, hackathonId, count });
+    }, 300);
+    return () => {
+      current = false;
+      window.clearTimeout(timer);
+    };
+  }, [hackathonId, localAddresses, preview, rosterSize]);
+  let alreadyAdded: number | null | undefined;
+  if (localAddresses) {
+    alreadyAdded = preview.participants.filter((row) => localAddresses.has(row.normalizedEmail)).length;
+  } else if (!preview.participants.length) {
+    alreadyAdded = 0;
+  } else if (lookup?.preview === preview && lookup.rosterSize === rosterSize && lookup.hackathonId === hackathonId) {
+    alreadyAdded = lookup.count;
+  }
   return (
     <ActionForm intent="participants.import">
       <input type="hidden" name="hackathonId" value={hackathonId} />
@@ -155,13 +182,14 @@ export function ParticipantImportForm({
       </div>
       {text.trim() && (
         <div className={styles.previewStats} aria-live="polite">
-          <span>
-            <strong>{preview.participants.length - alreadyAdded}</strong> new
-            participants
-          </span>
-          <span>
-            <strong>{alreadyAdded}</strong> already invited
-          </span>
+          {typeof alreadyAdded === "number" ? (
+            <>
+              <span><strong>{preview.participants.length - alreadyAdded}</strong> new participants</span>
+              <span><strong>{alreadyAdded}</strong> already invited</span>
+            </>
+          ) : (
+            <span>{alreadyAdded === null ? "Existing addresses will be checked during import." : "Checking existing participants…"}</span>
+          )}
           <span>
             <strong>{preview.duplicates}</strong> duplicates ignored
           </span>

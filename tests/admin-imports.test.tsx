@@ -7,14 +7,42 @@ import {
   VoucherImportForm,
 } from "@/components/admin/ImportForms";
 
-const { submitAction } = vi.hoisted(() => ({ submitAction: vi.fn() }));
+const { submitAction, countImportedEmails } = vi.hoisted(() => ({
+  submitAction: vi.fn(), countImportedEmails: vi.fn(),
+}));
 vi.mock("@/lib/actions", () => ({ submitAction }));
+vi.mock("@/components/admin/count-imported-emails", () => ({ countImportedEmails }));
 beforeEach(() => {
   submitAction.mockReset().mockResolvedValue({ success: true, message: "Saved" });
+  countImportedEmails.mockReset();
 });
 afterEach(cleanup);
 
 describe("participant imports", () => {
+  it("looks up only pasted addresses for large rosters and ignores results for older input", async () => {
+    const earlier = Promise.withResolvers<number>();
+    countImportedEmails.mockReturnValueOnce(earlier.promise).mockResolvedValueOnce(1);
+    render(<ParticipantImportForm hackathonId="event" rosterSize={1300} />);
+    expect(countImportedEmails).not.toHaveBeenCalled();
+    const input = screen.getByRole("textbox");
+    fireEvent.change(input, { target: { value: "old@example.org" } });
+    await waitFor(() => expect(countImportedEmails).toHaveBeenCalledWith("event", ["old@example.org"]));
+    fireEvent.change(input, { target: { value: "New@example.org\nEXISTING@example.org" } });
+    earlier.resolve(0);
+    expect(screen.getByText("Checking existing participants…")).toBeDefined();
+    expect((await screen.findByText("already invited")).textContent).toBe("1 already invited");
+    expect(countImportedEmails).toHaveBeenLastCalledWith("event", ["new@example.org", "existing@example.org"]);
+    expect(screen.getByText("new participants").textContent).toBe("1 new participants");
+  });
+
+  it("keeps import available if the duplicate preview is temporarily unavailable", async () => {
+    countImportedEmails.mockRejectedValue(new Error("unavailable"));
+    render(<ParticipantImportForm hackathonId="event" rosterSize={1300} />);
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "person@example.org" } });
+    expect(await screen.findByText("Existing addresses will be checked during import.")).toBeDefined();
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "Import participants" }).disabled).toBe(false);
+  });
+
   it("previews new, existing and duplicate addresses, then sends the reviewed list", async () => {
     render(<ParticipantImportForm hackathonId="event" existingEmails={["a@example.org"]} />);
     const button = screen.getByRole<HTMLButtonElement>("button", {

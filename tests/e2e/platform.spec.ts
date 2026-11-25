@@ -114,6 +114,9 @@ for (const { source, button, expectedReturn, start } of [
 test("participants form teams, invite teammates, save a private draft, and publish with consent", async ({ page, context, browser }) => {
   test.setTimeout(90_000);
   await authenticate(context, "BUILDER");
+  await page.goto("/hackathons");
+  const directoryCard = page.locator(`a[href="/hackathons/${eventSlug}"]`);
+  await expect(directoryCard).toContainText("2 projects");
   await page.goto(`/hackathons/${eventSlug}/portal?tab=team`);
   await page.getByLabel("Team name", { exact: true }).fill("Browser builders");
   await expect.poll(() => page.getByLabel("Team name", { exact: true }).evaluate(input => {
@@ -203,6 +206,8 @@ test("participants form teams, invite teammates, save a private draft, and publi
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await ownProject.getByRole("button", { name: "Copy project link", exact: true }).click();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(new URL(projectHref!, page.url()).href);
+  await page.goto("/hackathons");
+  await expect(directoryCard).toContainText("3 projects");
 });
 
 test("participants can reveal only their assigned credit", async ({ page, context, browser }) => {

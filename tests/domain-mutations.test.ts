@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Viewer } from "../lib/types";
 
 const mocked = vi.hoisted(() => {
-  const methods = ["findUnique", "findMany", "count", "create", "createMany", "update", "updateMany", "delete", "deleteMany", "upsert", "groupBy"] as const;
+  const methods = ["findUnique", "findFirst", "findMany", "count", "create", "createMany", "update", "updateMany", "delete", "deleteMany", "upsert", "groupBy"] as const;
   const models = ["hackathon", "participant", "team", "teamInvitation", "project", "projectTrack", "track", "vote", "creditOffer", "creditVoucher", "user"] as const;
   const delegates = Object.fromEntries(models.map(model => [model, Object.fromEntries(methods.map(method => [method, vi.fn()]))])) as Record<(typeof models)[number], Record<(typeof methods)[number], ReturnType<typeof vi.fn>>>;
   const tx = { ...delegates, $executeRaw: vi.fn() };
@@ -98,46 +98,51 @@ describe("server authorization", () => {
 });
 
 describe("vote invariants", () => {
+  const project = {
+    status: "SUBMITTED", hackathonId: activeEvent.id, teamId: "team-1", contributorIds: [],
+    _count: { votes: 0 },
+    hackathon: { ...activeEvent, _count: { votes: 0 } },
+  };
   it("blocks every contributor from self-voting even if membership data later changes", async () => {
-    mocked.tx.project.findUnique.mockResolvedValue({ status: "SUBMITTED", hackathon: activeEvent, contributorIds: [viewer.id], team: { members: [] } });
+    mocked.tx.project.findUnique.mockResolvedValue({ ...project, contributorIds: [viewer.id] });
     await expect(performMutation("vote.add", form({ projectId: "project-1" }), viewer)).rejects.toThrow("own team's project");
     expect(mocked.tx.vote.createMany).not.toHaveBeenCalled();
   });
 
   it("uses the same vote allowance for visitors and participants", async () => {
-    mocked.tx.project.findUnique.mockResolvedValue({ status: "SUBMITTED", hackathonId: "event-1", hackathon: activeEvent, contributorIds: [], team: { members: [] } });
-    mocked.tx.vote.findUnique.mockResolvedValue(null);
-    mocked.tx.vote.count.mockResolvedValue(3);
+    mocked.tx.project.findUnique.mockResolvedValue({ ...project, hackathon: { ...activeEvent, _count: { votes: 3 } } });
     await expect(performMutation("vote.add", form({ projectId: "project-1" }), viewer)).rejects.toThrow("used all your votes");
     expect(mocked.tx.participant.findUnique).not.toHaveBeenCalled();
     expect(mocked.tx.vote.createMany).not.toHaveBeenCalled();
   });
 
   it("allows withdrawal at the allowance limit", async () => {
-    mocked.tx.project.findUnique.mockResolvedValue({ status: "SUBMITTED", hackathon: activeEvent, contributorIds: [], team: { members: [] } });
-    mocked.tx.vote.findUnique.mockResolvedValue({ id: "vote-1" });
+    mocked.tx.project.findUnique.mockResolvedValue({ ...project, hackathon: { ...activeEvent, _count: { votes: 3 } } });
     await expect(performMutation("vote.withdraw", form({ projectId: "project-1" }), viewer)).resolves.toMatchObject({ message: expect.stringContaining("removed") });
     expect(mocked.tx.vote.deleteMany).toHaveBeenCalledWith({ where: { projectId: "project-1", userId: viewer.id } });
     expect(mocked.tx.vote.count).not.toHaveBeenCalled();
+    expect(mocked.tx.participant.findFirst).not.toHaveBeenCalled();
+    expect(mocked.tx.project.findUnique).toHaveBeenCalledWith(expect.objectContaining({
+      select: expect.objectContaining({ contributorIds: false, _count: false }),
+    }));
   });
 
   it("lets a voter withdraw an existing ballot after moderation hides the project", async () => {
-    mocked.tx.project.findUnique.mockResolvedValue({ status: "HIDDEN", hackathon: activeEvent, contributorIds: [], team: { members: [] } });
-    mocked.tx.vote.findUnique.mockResolvedValue({ id: "vote-hidden" });
+    mocked.tx.project.findUnique.mockResolvedValue({ status: "HIDDEN", hackathon: activeEvent });
     await expect(performMutation("vote.withdraw", form({ projectId: "project-hidden" }), viewer)).resolves.toMatchObject({ message: expect.stringContaining("removed") });
     expect(mocked.tx.vote.deleteMany).toHaveBeenCalledWith({ where: { projectId: "project-hidden", userId: viewer.id } });
   });
 
   it("never accepts a new vote for a hidden project", async () => {
-    mocked.tx.project.findUnique.mockResolvedValue({ status: "HIDDEN", hackathon: activeEvent, contributorIds: [], team: { members: [] } });
-    mocked.tx.vote.findUnique.mockResolvedValue(null);
+    mocked.tx.project.findUnique.mockResolvedValue({ ...project, status: "HIDDEN" });
     await expect(performMutation("vote.add", form({ projectId: "project-hidden" }), viewer)).rejects.toThrow("not available for voting");
     expect(mocked.tx.vote.createMany).not.toHaveBeenCalled();
   });
 
   it("keeps an existing ballot on a repeated vote even at the limit", async () => {
-    mocked.tx.project.findUnique.mockResolvedValue({ status: "SUBMITTED", hackathon: activeEvent, contributorIds: [], team: { members: [] } });
-    mocked.tx.vote.findUnique.mockResolvedValue({ id: "vote-1" });
+    mocked.tx.project.findUnique.mockResolvedValue({
+      ...project, _count: { votes: 1 }, hackathon: { ...activeEvent, _count: { votes: 3 } },
+    });
     await performMutation("vote.add", form({ projectId: "project-1" }), viewer);
     expect(mocked.tx.vote.deleteMany).not.toHaveBeenCalled();
     expect(mocked.tx.vote.createMany).not.toHaveBeenCalled();
@@ -152,12 +157,13 @@ describe("vote invariants", () => {
   });
 
   it("allows a voter with the former email of another linked team member", async () => {
-    mocked.tx.project.findUnique.mockResolvedValue({
-      status: "SUBMITTED", hackathon: activeEvent, hackathonId: activeEvent.id, contributorIds: [],
-      team: { members: [{ userId: "different-user", normalizedEmail: viewer.email }] },
-    });
-    mocked.tx.vote.count.mockResolvedValue(0);
+    mocked.tx.project.findUnique.mockResolvedValue(project);
+    mocked.tx.participant.findFirst.mockResolvedValue(null);
     await performMutation("vote.add", form({ projectId: "project-1" }), viewer);
+    expect(mocked.tx.participant.findFirst).toHaveBeenCalledWith({
+      where: { teamId: project.teamId, OR: [{ userId: viewer.id }, { userId: null, normalizedEmail: viewer.email }] },
+      select: { id: true },
+    });
     expect(mocked.tx.vote.createMany).toHaveBeenCalledOnce();
   });
 });
@@ -170,10 +176,11 @@ describe("credit allocation", () => {
 
   it("keeps allocation previews read-only", async () => {
     mocked.tx.creditOffer.findUnique.mockResolvedValue({ id: "offer-1", hackathonId: "event-1", expiresAt: null });
-    mocked.tx.participant.findMany.mockResolvedValue([{ id: "person-1" }, { id: "person-2" }]);
-    mocked.tx.creditVoucher.findMany.mockResolvedValue([]);
+    mocked.tx.participant.count.mockResolvedValueOnce(3).mockResolvedValueOnce(2);
     mocked.tx.creditVoucher.count.mockResolvedValue(2);
-    await expect(performMutation("credits.assign", form({ offerId: "offer-1", preview: "true" }), admin)).resolves.toMatchObject({ message: expect.stringContaining("Allocation preview") });
+    await expect(performMutation("credits.assign", form({ offerId: "offer-1", preview: "true" }), admin)).resolves.toMatchObject({ message: expect.stringContaining("2 needed, 2 available, 1 already assigned") });
+    expect(mocked.tx.participant.findMany).not.toHaveBeenCalled();
+    expect(mocked.tx.creditVoucher.findMany).not.toHaveBeenCalled();
     expect(mocked.tx.$executeRaw).not.toHaveBeenCalled();
     expect(mocked.tx.creditVoucher.update).not.toHaveBeenCalled();
   });
@@ -181,11 +188,12 @@ describe("credit allocation", () => {
   it("assigns different vouchers in a parameterized bulk update", async () => {
     mocked.tx.creditOffer.findUnique.mockResolvedValue({ id: "offer-1", hackathonId: "event-1", expiresAt: null });
     mocked.tx.participant.findMany.mockResolvedValue([{ id: "person-1" }, { id: "person-2" }]);
-    mocked.tx.creditVoucher.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([{ id: "voucher-1" }, { id: "voucher-2" }]);
-    mocked.tx.creditVoucher.count.mockResolvedValue(2);
+    mocked.tx.participant.count.mockResolvedValue(2);
+    mocked.tx.creditVoucher.findMany.mockResolvedValue([{ id: "voucher-1" }, { id: "voucher-2" }]);
     mocked.tx.$executeRaw.mockResolvedValue(2);
     await expect(performMutation("credits.assign", form({ offerId: "offer-1" }), admin)).resolves.toMatchObject({ message: expect.stringContaining("2 vouchers assigned") });
     expect(mocked.tx.$executeRaw).toHaveBeenCalledTimes(1);
+    expect(mocked.tx.creditVoucher.findMany).toHaveBeenCalledWith(expect.objectContaining({ select: { id: true }, take: 2 }));
     const query = mocked.tx.$executeRaw.mock.calls[0][0];
     expect(query.values).toEqual(expect.arrayContaining(["voucher-1", "voucher-2", "person-1", "person-2", "offer-1"]));
     expect(mocked.tx.creditVoucher.update).not.toHaveBeenCalled();
@@ -202,8 +210,8 @@ describe("credit allocation", () => {
   it("does not partially allocate when inventory is insufficient", async () => {
     mocked.tx.creditOffer.findUnique.mockResolvedValue({ id: "offer-1", hackathonId: "event-1", expiresAt: null });
     mocked.tx.participant.findMany.mockResolvedValue([{ id: "person-1" }, { id: "person-2" }]);
-    mocked.tx.creditVoucher.findMany.mockResolvedValue([]);
-    mocked.tx.creditVoucher.count.mockResolvedValue(1);
+    mocked.tx.participant.count.mockResolvedValue(2);
+    mocked.tx.creditVoucher.findMany.mockResolvedValue([{ id: "voucher-1" }]);
     await expect(performMutation("credits.assign", form({ offerId: "offer-1" }), admin)).rejects.toThrow("No assignments were changed");
     expect(mocked.tx.creditVoucher.update).not.toHaveBeenCalled();
   });
@@ -242,7 +250,7 @@ describe("submission consent", () => {
   it("does not publish without explicit consent", async () => {
     mocked.tx.hackathon.findUnique.mockResolvedValue(activeEvent);
     mocked.tx.participant.findUnique.mockResolvedValue({ id: "person-1", userId: viewer.id, teamId: "team-1", revokedAt: null });
-    mocked.tx.team.findUnique.mockResolvedValue({ id: "team-1", hackathonId: "event-1", project: null, members: [{ userId: viewer.id }] });
+    mocked.tx.team.findUnique.mockResolvedValue({ id: "team-1", hackathonId: "event-1", project: null, _count: { members: 1 } });
     await expect(performMutation("project.save", form({ hackathonId: "event-1", teamId: "team-1", name: "Project", description: "What it does", videoUrl: "https://youtu.be/abc", githubUrl: "https://github.com/team/project", publish: "true" }), viewer)).rejects.toThrow("Agree to publish");
     expect(mocked.tx.project.upsert).not.toHaveBeenCalled();
   });
@@ -250,7 +258,7 @@ describe("submission consent", () => {
   it.each(["DRAFT", "SUBMITTED"])("rejects a stale draft save after a teammate's %s edit", async status => {
     mocked.tx.participant.findUnique.mockResolvedValue({ id: "person-1", userId: viewer.id, teamId: "team-1" });
     mocked.tx.team.findUnique.mockResolvedValue({
-      id: "team-1", hackathonId: activeEvent.id, members: [{ userId: viewer.id }],
+      id: "team-1", hackathonId: activeEvent.id, _count: { members: 1 },
       project: { status, updatedAt: new Date("2026-01-01T00:01:00Z") },
     });
     const stale = form({ hackathonId: activeEvent.id, teamId: "team-1", name: "Old draft", expectedUpdatedAt: "2026-01-01T00:00:00.000Z" });

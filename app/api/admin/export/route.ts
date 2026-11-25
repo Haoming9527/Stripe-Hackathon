@@ -35,7 +35,10 @@ export async function GET(request: NextRequest) {
   if (type === "participants") {
     const people = await prisma.participant.findMany({
       where: { hackathonId },
-      include: { team: { select: { name: true } } },
+      select: {
+        normalizedEmail: true, name: true, userId: true, revokedAt: true,
+        team: { select: { name: true } },
+      },
       orderBy: { normalizedEmail: "asc" },
     });
     rows = [
@@ -51,7 +54,8 @@ export async function GET(request: NextRequest) {
   } else {
     const projects = await prisma.project.findMany({
       where: { hackathonId, publishedAt: { not: null } },
-      include: {
+      select: {
+        name: true, status: true,
         team: { select: { name: true } },
         _count: { select: { votes: true } },
       },

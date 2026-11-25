@@ -16,10 +16,10 @@ import { NavigationIcon } from "@/components/NavigationIcon";
 
 export function OverviewTab({
   event,
-  team,
+  hasTeam,
   submissionsOpen,
   now,
-}: Pick<PortalData, "event" | "team" | "submissionsOpen" | "now">) {
+}: Pick<PortalData, "event" | "submissionsOpen" | "now"> & { hasTeam: boolean }) {
   const base = `/hackathons/${event.slug}/portal`;
   return (
     <>
@@ -55,10 +55,10 @@ export function OverviewTab({
               : `Deadline · ${eventDate(event.submissionClosesAt, event.timezone, true)}`}
           </p>
           <Link
-            href={`${base}?tab=${team ? "submission" : "team"}`}
+            href={`${base}?tab=${hasTeam ? "submission" : "team"}`}
             className="button button-primary"
           >
-            {team ? "Open your project" : "Open team page"}
+            {hasTeam ? "Open your project" : "Open team page"}
             <NavigationIcon><ArrowRight size={16} /></NavigationIcon>
           </Link>
         </div>

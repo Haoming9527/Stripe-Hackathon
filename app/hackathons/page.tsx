@@ -3,13 +3,13 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { NavigationIcon } from "@/components/NavigationIcon";
 import { eventDate } from "@/lib/presentation";
-import { listPublicEvents } from "@/lib/queries";
+import { getPublicDirectory } from "@/lib/public-events-cache";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Public galleries" };
 
 export default async function HackathonsPage() {
-  const events = await listPublicEvents();
+  const events = await getPublicDirectory();
   return (
     <section className="shell event-directory">
       <header className="directory-heading">
@@ -31,7 +31,7 @@ export default async function HackathonsPage() {
                   >
                     {event.status === "ACTIVE" ? "Active" : "Ended"}
                   </span>
-                  <time dateTime={event.startsAt.toISOString()}>
+                  <time dateTime={event.startsAt}>
                     <span className="sr-only">Starts </span>
                     {eventDate(event.startsAt, event.timezone)}
                   </time>

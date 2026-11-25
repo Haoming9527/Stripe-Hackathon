@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getViewer, missingAuthSettings } from "@/lib/auth";
 import { safeCallbackPath } from "@/lib/auth-policy";
-import { getFeaturedEvent } from "@/lib/featured-event";
+import { getFeaturedEvent } from "@/lib/public-events-cache";
 import { findParticipant } from "@/lib/queries";
 import { ArrowRight } from "lucide-react";
 import { CommunityGradient } from "@/components/CommunityGradient";

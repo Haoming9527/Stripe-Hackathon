@@ -1,17 +1,11 @@
+import { dateFormatter } from "./date-format";
+
 export function eventDate(
   value: Date | string,
   timezone = "Asia/Singapore",
   time = false,
 ) {
-  return new Intl.DateTimeFormat("en", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: timezone,
-    ...(time
-      ? ({ hour: "numeric", minute: "2-digit", timeZoneName: "short" } as const)
-      : {}),
-  }).format(new Date(value));
+  return dateFormatter(timezone, time ? "dateTimeWithZone" : "date").format(new Date(value));
 }
 
 export function youtubeId(url: string): string | null {

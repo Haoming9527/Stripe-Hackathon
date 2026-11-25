@@ -10,7 +10,7 @@ export function SubmissionTab({
   team,
   submissionsOpen,
   now,
-}: Pick<PortalData, "event" | "team" | "submissionsOpen" | "now">) {
+}: Pick<PortalData, "event" | "submissionsOpen" | "now"> & { team: PortalData["submissionTeam"] }) {
   const slug = event.slug;
   const base = `/hackathons/${slug}/portal`;
   const project = team?.project;

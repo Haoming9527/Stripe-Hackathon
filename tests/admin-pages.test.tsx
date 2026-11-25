@@ -9,13 +9,14 @@ import AdminLoading from "@/app/admin/loading";
 import AdminHome from "@/app/admin/page";
 import AdminEventPage from "@/app/admin/[id]/page";
 import NewHackathon from "@/app/admin/new/page";
+import { countImportedEmails } from "@/components/admin/count-imported-emails";
 import { adminEvent } from "./admin-fixture";
 
 const { getViewer, db } = vi.hoisted(() => ({
   getViewer: vi.fn(),
   db: {
     hackathon: { findMany: vi.fn(), findUnique: vi.fn() },
-    participant: { findMany: vi.fn() },
+    participant: { findMany: vi.fn(), count: vi.fn() },
     team: { findMany: vi.fn() },
     project: { findMany: vi.fn() },
     creditOffer: { findMany: vi.fn() },
@@ -49,11 +50,11 @@ async function page(node: ReactNode) {
   return within(container);
 }
 
-async function eventTab(tab?: string) {
+async function eventTab(tab?: string, requestedPage?: string) {
   return page(
     await AdminEventPage({
       params: Promise.resolve({ id: adminEvent.id }),
-      searchParams: Promise.resolve({ tab }),
+      searchParams: Promise.resolve({ tab, page: requestedPage }),
     }),
   );
 }
@@ -166,6 +167,7 @@ describe("event management tabs", () => {
       description: "",
       location: "",
       tracks: [],
+      _count: { ...adminEvent._count, tracks: 0 },
       submissionsClosed: true,
       votingClosed: true,
     });
@@ -203,6 +205,41 @@ describe("event management tabs", () => {
   ] as const)("explains an empty %s tab", async (tab, message) => {
     const result = await eventTab(tab);
     expect(result.getByText(message)).toBeDefined();
+  });
+
+  it.each([
+    ["2", 2, 50], ["100", 3, 100], ["bad", 1, 0], ["-1", 1, 0],
+  ])("paginates a large roster for page %s", async (requested, expected, offset) => {
+    db.hackathon.findUnique.mockResolvedValue({
+      ...adminEvent, _count: { ...adminEvent._count, participants: 120 },
+    });
+    const list = await eventTab("participants", String(requested));
+    expect(list.getByText("120 participants")).toBeDefined();
+    const nav = within(list.getByRole("navigation", { name: "Participant pages" }));
+    expect(nav.getByText(`Page ${expected} of 3`)).toBeDefined();
+    const previous = nav.queryByRole("link", { name: "Previous" });
+    const next = nav.queryByRole("link", { name: "Next" });
+    expect(previous?.getAttribute("href")).toBe(expected === 1 ? undefined : `/admin/event-1?tab=participants&page=${Number(expected) - 1}`);
+    expect(next?.getAttribute("href")).toBe(expected === 3 ? undefined : `/admin/event-1?tab=participants&page=${Number(expected) + 1}`);
+    expect(db.participant.findMany).toHaveBeenCalledOnce();
+    expect(db.participant.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { hackathonId: adminEvent.id }, orderBy: { normalizedEmail: "asc" }, skip: offset, take: 50,
+    }));
+    expect(list.getByRole("link", { name: "Export CSV" }).getAttribute("href")).toBe("/api/admin/export?hackathonId=event-1&type=participants");
+  });
+
+  it("checks duplicates across pages within the event and requires organizer access", async () => {
+    const emails = ["invited@example.org", "new@example.org"];
+    db.participant.count.mockResolvedValue(1);
+    await expect(countImportedEmails(adminEvent.id, emails)).resolves.toBe(1);
+    expect(db.participant.count).toHaveBeenCalledWith({ where: {
+      hackathonId: adminEvent.id, normalizedEmail: { in: emails },
+    } });
+    await expect(countImportedEmails(adminEvent.id, ["bad"])).rejects.toThrow("Invalid participant");
+    await expect(countImportedEmails(adminEvent.id, Array(5001).fill("a@example.org"))).rejects.toThrow("Invalid participant");
+    getViewer.mockResolvedValue({ isAdmin: false });
+    await expect(countImportedEmails(adminEvent.id, emails)).rejects.toThrow("Page not found");
+    expect(db.participant.count).toHaveBeenCalledOnce();
   });
 
   it("distinguishes joined, invited and revoked participants and preserves locked identities", async () => {

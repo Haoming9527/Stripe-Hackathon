@@ -16,6 +16,13 @@ import {
   type MutationResult,
 } from "./shared";
 
+const teamPolicy = { status: true, submissionsClosed: true, submissionClosesAt: true, maxTeamSize: true } as const;
+const teamWithCapacity = {
+  hackathonId: true, ownerId: true, rosterLockedAt: true,
+  hackathon: { select: teamPolicy },
+  _count: { select: { members: true } },
+} as const;
+
 export async function createTeam(
   form: FormData,
   viewer: Viewer,
@@ -23,12 +30,13 @@ export async function createTeam(
   const hackathonId = required(form, "hackathonId", "a hackathon");
   const name = required(form, "name", "a team name", 100);
   await serializable(async (tx) => {
-    const event = await eventById(tx, hackathonId);
+    const event = await eventById(tx, hackathonId, teamPolicy);
     teamChangesAllowed(event);
     const member = await participant(tx, hackathonId, viewer);
     assert(!member.teamId, "You already belong to a team in this hackathon.");
     const team = await tx.team.create({
       data: { hackathonId, name, ownerId: viewer.id },
+      select: { id: true },
     });
     await tx.participant.update({
       where: { id: member.id },
@@ -56,7 +64,7 @@ export async function inviteToTeam(
   await serializable(async (tx) => {
     const team = await tx.team.findUnique({
       where: { id: teamId },
-      include: { hackathon: true, _count: { select: { members: true } } },
+      select: teamWithCapacity,
     });
     assert(
       team && team.ownerId === viewer.id,
@@ -76,6 +84,7 @@ export async function inviteToTeam(
           normalizedEmail: email,
         },
       },
+      select: { id: true, teamId: true, revokedAt: true },
     });
     assert(
       recipient && !recipient.revokedAt,
@@ -84,6 +93,7 @@ export async function inviteToTeam(
     assert(!recipient.teamId, "That participant already belongs to a team.");
     const previous = await tx.teamInvitation.findUnique({
       where: { teamId_participantId: { teamId, participantId: recipient.id } },
+      select: { status: true },
     });
     assert(
       previous?.status !== "PENDING",
@@ -115,11 +125,13 @@ export async function respondToInvitation(
   await serializable(async (tx) => {
     const invitation = await tx.teamInvitation.findUnique({
       where: { id },
-      include: {
-        participant: true,
-        team: {
-          include: { hackathon: true, _count: { select: { members: true } } },
-        },
+      select: {
+        status: true, participantId: true, teamId: true,
+        team: { select: {
+          ...teamWithCapacity,
+          hackathon: response === "accept" && teamWithCapacity.hackathon,
+          _count: response === "accept" && teamWithCapacity._count,
+        } },
       },
     });
     assert(
@@ -187,7 +199,7 @@ export async function removeFromTeam(
   await serializable(async (tx) => {
     const team = await tx.team.findUnique({
       where: { id: teamId },
-      include: { hackathon: true, members: true },
+      select: { ...teamWithCapacity, _count: leave && teamWithCapacity._count },
     });
     assert(team, "This team could not be found.");
     teamChangesAllowed(team.hackathon);
@@ -202,19 +214,19 @@ export async function removeFromTeam(
         team.ownerId === viewer.id && participantId !== caller.id,
         "Only the team owner can remove another teammate.",
       );
-    const member = team.members.find((item) => item.id === participantId);
-    assert(member, "That participant does not belong to this team.");
     if (team.ownerId === viewer.id && leave) {
       assert(
-        team.members.length === 1,
+        team._count.members === 1,
         "Remove the other members before leaving your team.",
       );
       await tx.team.delete({ where: { id: teamId } });
-    } else
-      await tx.participant.update({
-        where: { id: participantId },
+    } else {
+      const changed = await tx.participant.updateMany({
+        where: { id: participantId, teamId },
         data: { teamId: null },
       });
+      assert(changed.count === 1, "That participant does not belong to this team.");
+    }
   });
   return { message: leave ? "You left the team." : "Teammate removed." };
 }

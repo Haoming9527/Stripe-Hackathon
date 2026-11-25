@@ -25,6 +25,7 @@ test("admin sessions receive live changes and preserve an open draft", async ({
     await page.bringToFront();
     const previousLocation = await page.getByLabel("Location", { exact: true }).inputValue();
     expect(await (await request.get("/")).text()).toContain(previousLocation);
+    expect(await (await request.get("/hackathons")).text()).toContain(previousLocation);
     await page.getByLabel("Location", { exact: true }).fill("Community room");
     await expect(page.getByLabel("Location", { exact: true })).toHaveValue("Community room");
     await page.getByRole("button", { name: "Save event" }).click();
@@ -32,6 +33,7 @@ test("admin sessions receive live changes and preserve an open draft", async ({
       page.getByText("Hackathon saved.", { exact: true }),
     ).toBeVisible();
     expect(await (await request.get("/")).text()).toContain("Community room");
+    expect(await (await request.get("/hackathons")).text()).toContain("Community room");
     await second.bringToFront();
     await expect(
       second.getByText(/Another organizer saved changes/),

@@ -20,18 +20,21 @@ vi.mock("@/lib/db", () => ({
     vote: { findMany: f.votes },
   },
 }));
-vi.mock("@/lib/queries", () => ({
+vi.mock("@/lib/queries", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/queries")>(),
   listPublicEvents: f.list,
   findPublicEvent: f.event,
   findParticipant: f.member,
-  publicProjectSelect: {},
 }));
 vi.mock("@/lib/auth", () => ({ getViewer: f.viewer, missingAuthSettings: () => [] }));
+vi.mock("next/cache", () => ({ unstable_cache: (read: () => Promise<unknown>) => read }));
 vi.mock("@/components/ActionForm", () => ({
   ActionForm: ({ children }: React.PropsWithChildren) => <form>{children}</form>,
 }));
 vi.mock("@/components/ProjectCard", () => ({
-  ProjectCard: ({ project }: { project: { name: string } }) => <article>{project.name}</article>,
+  ProjectCard: ({ project, vote }: { project: { name: string }; vote: { own: boolean } }) => (
+    <article data-own={vote.own}>{project.name}</article>
+  ),
   ProjectVote: ({ state }: { state: { own: boolean; voted: boolean; remaining: number } }) => (
     <output>{JSON.stringify(state)}</output>
   ),
@@ -77,7 +80,7 @@ beforeEach(() => {
   f.viewer.mockResolvedValue(null);
   f.member.mockResolvedValue(null);
   f.projects.mockResolvedValue([]);
-  f.project.mockResolvedValue(project);
+  f.project.mockResolvedValue({ ...project, hackathon: event });
   f.count.mockResolvedValue(0);
   f.votes.mockResolvedValue([]);
 });
@@ -109,6 +112,7 @@ it("offers guests sign-in and shows the empty gallery and public voting allowanc
   expect(html).toContain("2 votes per person");
   expect(html).toContain("No published projects yet");
   expect(f.votes).not.toHaveBeenCalled();
+  expect(f.count).not.toHaveBeenCalled();
   f.event.mockResolvedValue({ ...event, votesPerUser: 1, location: null, tracks: [] });
   const single = await gallery();
   expect(single).toContain("1 vote per person");
@@ -119,13 +123,17 @@ it("keeps filters on pagination and allows withdrawal of a vote for an unavailab
   f.viewer.mockResolvedValue(viewer);
   f.member.mockResolvedValue({ id: "member" });
   f.votes.mockResolvedValue([{ projectId: "withdrawn", project: { status: "HIDDEN" } }]);
-  f.projects.mockResolvedValueOnce([project]).mockResolvedValueOnce([{ id: project.id }]);
+  f.projects.mockResolvedValue([{
+    ...project, contributorIds: [], team: { ...project.team, _count: { members: 1 } },
+  }]);
   f.count.mockResolvedValue(56);
   const html = await gallery({ q: "team one", track: "web", page: "2" });
   expect(html).toContain('href="/hackathons/build/portal"');
   expect(html).toContain("1 of 2 votes remaining");
   expect(html).toContain("Withdraw vote for unavailable project 1");
   expect(html).toContain("Project Alpha");
+  expect(html).toContain('data-own="true"');
+  expect(f.projects).toHaveBeenCalledTimes(1);
   for (const page of [1, 3]) expect(html).toContain("q=team+one&amp;track=web&amp;page=" + page);
   expect(f.projects).toHaveBeenCalledWith(
     expect.objectContaining({
@@ -134,6 +142,19 @@ it("keeps filters on pagination and allows withdrawal of a vote for an unavailab
       take: 24,
     }),
   );
+});
+
+it("retains historical contributor ownership while serving other cards as eligible", async () => {
+  f.viewer.mockResolvedValue(viewer);
+  const team = { name: "Former team", _count: { members: 0 } };
+  f.projects.mockResolvedValue([
+    { ...project, team, contributorIds: [viewer.id] },
+    { ...project, id: "other", team, name: "Someone else's project", contributorIds: [] },
+  ]);
+  const html = await gallery();
+  expect(html).toContain('data-own="true">Project Alpha');
+  expect(html).toContain('data-own="false">Someone');
+  expect(f.count).not.toHaveBeenCalled();
 });
 
 it("clamps invalid pagination, limits query length and explains future voting and empty search results", async () => {
@@ -180,12 +201,12 @@ it("exposes links, tracks and the signed-in viewer's own vote state on a submitt
   ])
     expect(html).toContain(label);
   expect(f.project).toHaveBeenCalledWith(
-    expect.objectContaining({ where: { id: "p", hackathonId: "evt", status: "SUBMITTED" } }),
+    expect.objectContaining({ where: { id: "p", hackathon: { slug: "build", status: { not: "DRAFT" } }, status: "SUBMITTED" } }),
   );
 });
 
 it("shows a guest project without optional tracks or a demo", async () => {
-  f.project.mockResolvedValue({ ...project, demoUrl: null, tracks: [] });
+  f.project.mockResolvedValue({ ...project, hackathon: event, demoUrl: null, tracks: [] });
   const html = await detail();
   expect(html).toContain("Project Alpha");
   expect(html).not.toContain("Open demo");
@@ -195,9 +216,7 @@ it("shows a guest project without optional tracks or a demo", async () => {
 it("returns not found for unknown events and unpublished projects", async () => {
   f.event.mockResolvedValue(null);
   await expect(gallery()).rejects.toThrow();
-  await expect(detail()).rejects.toThrow();
-  expect(f.project).not.toHaveBeenCalled();
-  f.event.mockResolvedValue(event);
   f.project.mockResolvedValue(null);
   await expect(detail()).rejects.toThrow();
+  expect(f.votes).not.toHaveBeenCalled();
 });

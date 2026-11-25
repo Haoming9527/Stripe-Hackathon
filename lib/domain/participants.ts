@@ -25,7 +25,9 @@ export async function joinInvitedHackathon(
   viewer: Viewer,
 ) {
   return serializable(async (tx) => {
-    const event = await tx.hackathon.findUnique({ where: { id: hackathonId } });
+    const event = await tx.hackathon.findUnique({
+      where: { id: hackathonId }, select: { status: true, slug: true },
+    });
     if (event?.status !== "ACTIVE") return null;
     await tx.participant.createMany({
       data: {
@@ -79,7 +81,7 @@ export async function importParticipants(
     `Fix ${result.invalid.length} invalid email address(es) before importing: ${result.invalid.slice(0, 5).join(", ")}`,
   );
   await serializable(async (tx) => {
-    await eventById(tx, hackathonId);
+    await eventById(tx, hackathonId, { id: true });
     const users = await tx.user.findMany({
       where: {
         email: { in: result.participants.map((item) => item.normalizedEmail) },
@@ -107,7 +109,7 @@ export async function manageParticipant(
   admin(viewer);
   const hackathonId = required(form, "hackathonId", "a hackathon");
   await serializable(async (tx) => {
-    await eventById(tx, hackathonId);
+    await eventById(tx, hackathonId, { id: true });
     const id =
       operation === "create"
         ? null
@@ -115,8 +117,9 @@ export async function manageParticipant(
     const member = id
       ? await tx.participant.findUnique({
           where: { id },
-          include: {
-            _count: { select: { vouchers: true, invitations: true } },
+          select: {
+            id: true, hackathonId: true, normalizedEmail: true, name: true, userId: true, teamId: true,
+            _count: operation === "update" && { select: { vouchers: true, invitations: true } },
           },
         })
       : null;
@@ -154,6 +157,7 @@ export async function manageParticipant(
     }
     const duplicate = await tx.participant.findUnique({
       where: { hackathonId_normalizedEmail: { hackathonId, normalizedEmail } },
+      select: { id: true },
     });
     assert(
       !duplicate || duplicate.id === id,

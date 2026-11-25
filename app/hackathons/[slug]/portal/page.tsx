@@ -49,7 +49,7 @@ export default async function PortalPage({
         event={event}
         viewer={viewer}
         tab={tab}
-        hasInvitations={data.invitations.length > 0}
+        hasInvitations={data.hasInvitations}
         hasCreditOffers={data.hasCreditOffers}
       />
       <section className="shell portal-content">
@@ -62,7 +62,7 @@ export default async function PortalPage({
         {tab === "overview" && (
           <OverviewTab
             event={data.event}
-            team={data.team}
+            hasTeam={!!data.participant?.teamId}
             submissionsOpen={data.submissionsOpen}
             now={data.now}
           />
@@ -81,7 +81,7 @@ export default async function PortalPage({
         {tab === "submission" && (
           <SubmissionTab
             event={data.event}
-            team={data.team}
+            team={data.submissionTeam}
             submissionsOpen={data.submissionsOpen}
             now={data.now}
           />

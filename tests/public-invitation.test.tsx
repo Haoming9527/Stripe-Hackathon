@@ -11,7 +11,7 @@ const f = vi.hoisted(() => ({
   missingSettings: vi.fn(),
   form: vi.fn<(props: { action: () => Promise<void>; afterSignIn: boolean }) => void>(),
 }));
-vi.mock("next/cache", () => ({ revalidatePath: f.refresh }));
+vi.mock("next/cache", () => ({ refresh: f.refresh }));
 vi.mock("next/navigation", async (importOriginal) => ({
   ...(await importOriginal<typeof import("next/navigation")>()),
   redirect: (path: string) => {
@@ -85,7 +85,7 @@ it("explains disabled sign-in, rejected joins, and closed events", async () => {
   expect(f.form).not.toHaveBeenCalled();
 });
 
-it("enrolls the signed-in account once, refreshes the admin participant list, and opens the portal", async () => {
+it("enrolls the signed-in account once and opens a fresh participant portal", async () => {
   f.viewer.mockResolvedValue(account);
   f.join.mockResolvedValue("build-week");
   expect(await page({ signedIn: "1" })).toContain(account.email);
@@ -93,7 +93,7 @@ it("enrolls the signed-in account once, refreshes the admin participant list, an
   expect(afterSignIn).toBe(true);
   await expect(action()).rejects.toThrow("redirect /hackathons/build-week/portal");
   expect(f.join).toHaveBeenCalledExactlyOnceWith("event", account);
-  expect(f.refresh).toHaveBeenCalledWith("/admin/event");
+  expect(f.refresh).toHaveBeenCalledOnce();
 });
 
 it("checks the token and current identity again when the join action runs", async () => {

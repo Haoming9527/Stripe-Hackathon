@@ -6,13 +6,14 @@ import { eventDate } from "../format";
 import styles from "../styles";
 import { Status } from "./Status";
 
-export async function Projects({ event }: { event: Hackathon }) {
+export async function Projects({ event }: { event: Pick<Hackathon, "id" | "slug" | "timezone"> }) {
   const projects = await prisma.project.findMany({
     where: { hackathonId: event.id },
     orderBy: [{ votes: { _count: "desc" } }, { createdAt: "asc" }],
-    include: {
+    select: {
+      id: true, name: true, status: true, publishedAt: true, githubUrl: true, videoUrl: true,
       team: { select: { name: true } },
-      tracks: { include: { track: { select: { name: true } } } },
+      tracks: { select: { track: { select: { name: true } } } },
       _count: { select: { votes: true } },
     },
   });

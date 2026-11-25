@@ -10,8 +10,10 @@ import {
   findPublicEvent,
   findParticipant,
   publicProjectSelect,
+  votingMemberFilter,
 } from "@/lib/queries";
 import { eventDate } from "@/lib/presentation";
+import { votingIsOpen } from "@/lib/validation";
 import { ProjectCard } from "@/components/ProjectCard";
 import { ActionForm } from "@/components/ActionForm";
 
@@ -53,54 +55,37 @@ export default async function GalleryPage({
       : {}),
     ...(track ? { tracks: { some: { trackId: track } } } : {}),
   };
-  const [projects, total, participant, votes, owned] = await Promise.all([
+  const [projects, total, participant, votes] = await Promise.all([
     prisma.project.findMany({
       where,
-      select: publicProjectSelect,
+      select: {
+        ...publicProjectSelect,
+        contributorIds: !!viewer,
+        team: {
+          select: {
+            name: true,
+            _count: viewer
+              ? { select: { members: { where: votingMemberFilter(viewer) } } }
+              : false,
+          },
+        },
+      },
       orderBy: [{ publishedAt: "desc" }, { id: "asc" }],
       skip: (page - 1) * 24,
       take: 24,
     }),
-    prisma.project.count({ where }),
-    viewer ? findParticipant(event.id, viewer.id, viewer.email) : null,
+    query || track ? prisma.project.count({ where }) : event._count.projects,
+    viewer && !viewer.isAdmin ? findParticipant(event.id, viewer.id, viewer.email) : null,
     viewer
       ? prisma.vote.findMany({
           where: { hackathonId: event.id, userId: viewer.id },
           select: { projectId: true, project: { select: { status: true } } },
         })
       : [],
-    viewer
-      ? prisma.project.findMany({
-          where: {
-            hackathonId: event.id,
-            OR: [
-              { contributorIds: { has: viewer.id } },
-              {
-                team: {
-                  members: {
-                    some: {
-                      OR: [
-                        { userId: viewer.id },
-                        { userId: null, normalizedEmail: viewer.email },
-                      ],
-                    },
-                  },
-                },
-              },
-            ],
-          },
-          select: { id: true },
-        })
-      : [],
   ]);
   const now = new Date();
-  const votingOpen =
-    event.status === "ACTIVE" &&
-    !event.votingClosed &&
-    now >= event.votingOpensAt &&
-    now < event.votingClosesAt;
+  const votingOpen = votingIsOpen(event, now);
   const votedIds = new Set(votes.map((v) => v.projectId));
-  const ownIds = new Set(owned.map((p) => p.id));
   const remaining = Math.max(0, event.votesPerUser - votes.length);
   const unavailableVotes = votes.filter(
     (vote) => vote.project.status !== "SUBMITTED",
@@ -255,14 +240,14 @@ export default async function GalleryPage({
         </form>
         {projects.length ? (
           <div className="gallery-card-grid">
-            {projects.map((project) => (
+            {projects.map(({ contributorIds, team, ...project }) => (
               <ProjectCard
                 key={project.id}
-                project={project}
+                project={{ ...project, team: { name: team.name } }}
                 slug={slug}
                 vote={{
                   signedIn: !!viewer,
-                  own: ownIds.has(project.id),
+                  own: !!viewer && (contributorIds.includes(viewer.id) || team._count.members > 0),
                   voted: votedIds.has(project.id),
                   open: votingOpen,
                   remaining,
