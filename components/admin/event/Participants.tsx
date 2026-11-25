@@ -1,5 +1,7 @@
 import type { Hackathon } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { CopyButton } from "@/components/CopyButton";
+import { participantInvitePath } from "@/lib/participant-invite";
 import { ParticipantEditor } from "../ParticipantEditor";
 import { ParticipantImportForm } from "../ImportForms";
 import { eventDate } from "../format";
@@ -17,6 +19,24 @@ export async function Participants({ event }: { event: Hackathon }) {
   });
   return (
     <>
+      <section className={styles.section}>
+        <div className={styles.sectionHead}>
+          <div>
+            <h2>Participant invitation link</h2>
+            <p>
+              Anyone with this reusable link can sign in with Google and join{" "}
+              {event.title} while the hackathon is active.
+            </p>
+          </div>
+          <CopyButton
+            value={participantInvitePath(event.id)}
+            label="Copy invitation link"
+          />
+        </div>
+        <div className={styles.sectionBody}>
+          <a href={participantInvitePath(event.id)}>Open invitation link</a>
+        </div>
+      </section>
       <div className={styles.split}>
         <section className={styles.section}>
           <div className={styles.sectionHead}>
@@ -52,7 +72,7 @@ export async function Participants({ event }: { event: Hackathon }) {
             <h2>Participant list</h2>
             <p>
               {participants.length}{" "}
-              {participants.length === 1 ? "person" : "people"} imported
+              {participants.length === 1 ? "participant" : "participants"}
             </p>
           </div>
           <a
@@ -121,7 +141,7 @@ export async function Participants({ event }: { event: Hackathon }) {
               ) : (
                 <tr>
                   <td colSpan={5} className={styles.tableEmpty}>
-                    Import participants above to get your event started.
+                    Share the invitation link or add participants above.
                   </td>
                 </tr>
               )}

@@ -21,6 +21,7 @@ vi.mock("../lib/db", () => {
 });
 
 import { performMutation } from "../lib/domain";
+import { joinInvitedHackathon } from "../lib/domain/participants";
 import { decryptVoucher } from "../lib/credits";
 import { authOptions } from "../lib/auth";
 import { findParticipant } from "../lib/queries";
@@ -94,6 +95,24 @@ suite("isolated PostgreSQL domain integration", () => {
       if (index < 4) await db.participant.create({ data: { hackathonId: eventId, normalizedEmail: user.email!, userId: user.id } });
     }
   }, 30_000);
+
+  it("enrolls invitees once, claims imported emails and respects revocation", async () => {
+    const visitor = people[4];
+    const retries = await Promise.all([
+      joinInvitedHackathon(eventId, visitor),
+      joinInvitedHackathon(eventId, visitor),
+    ]);
+    expect(retries).toEqual(["test-build", "test-build"]);
+    expect(await db.participant.count({ where: { hackathonId: eventId, normalizedEmail: visitor.email, userId: visitor.id } })).toBe(1);
+    const imported = await db.participant.findUniqueOrThrow({
+      where: { hackathonId_userId: { hackathonId: eventId, userId: people[1].id } },
+    });
+    await db.participant.update({ where: { id: imported.id }, data: { userId: null } });
+    expect(await joinInvitedHackathon(eventId, people[1])).toBe("test-build");
+    expect(await db.participant.findUnique({ where: { id: imported.id } })).toMatchObject({ userId: people[1].id });
+    await db.participant.update({ where: { id: imported.id }, data: { revokedAt: new Date() } });
+    expect(await joinInvitedHackathon(eventId, people[1])).toBeNull();
+  });
 
   async function teamFor(person: Viewer) {
     await performMutation("team.create", data({ hackathonId: eventId, name: `${person.name}'s team` }), person);

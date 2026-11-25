@@ -1,6 +1,7 @@
 import "server-only";
 import { db } from "../db";
 import type { Viewer } from "../types";
+import { findParticipant } from "../queries";
 import {
   assert,
   field,
@@ -17,6 +18,39 @@ import {
   serializable,
   type MutationResult,
 } from "./shared";
+
+export async function joinInvitedHackathon(
+  hackathonId: string,
+  viewer: Viewer,
+) {
+  return serializable(async (tx) => {
+    const event = await tx.hackathon.findUnique({ where: { id: hackathonId } });
+    if (event?.status !== "ACTIVE") return null;
+    await tx.participant.createMany({
+      data: {
+        hackathonId,
+        normalizedEmail: viewer.email,
+        userId: viewer.id,
+        name: viewer.name,
+      },
+      skipDuplicates: true,
+    });
+    const member = await findParticipant(
+      hackathonId,
+      viewer.id,
+      viewer.email,
+      tx,
+    );
+    if (!member) return null;
+    if (!member.userId) {
+      await tx.participant.update({
+        where: { id: member.id, userId: null, revokedAt: null },
+        data: { userId: viewer.id },
+      });
+    }
+    return event.slug;
+  });
+}
 
 export async function importParticipants(
   form: FormData,

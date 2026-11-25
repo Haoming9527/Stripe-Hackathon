@@ -6,9 +6,11 @@ import { useState } from "react";
 export function CopyButton({
   value,
   share = false,
+  label,
 }: {
   value: string;
   share?: boolean;
+  label?: string;
 }) {
   const [copied, setCopied] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -30,7 +32,7 @@ export function CopyButton({
         type="button"
         className="text-button"
         onClick={copy}
-        aria-label={share ? "Copy project link" : "Copy code"}
+        aria-label={label ?? (share ? "Copy project link" : "Copy code")}
       >
         {copied ? (
           <Check size={16} />
@@ -39,7 +41,7 @@ export function CopyButton({
         ) : (
           <Copy size={16} />
         )}
-        {copied ? "Copied" : share ? "Share" : "Copy"}
+        {copied ? "Copied" : label ?? (share ? "Share" : "Copy")}
       </button>
       {failed && <small role="alert">Select and copy the text manually.</small>}
     </span>

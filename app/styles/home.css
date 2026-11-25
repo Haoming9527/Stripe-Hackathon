@@ -16,8 +16,8 @@
   align-items: center;
   min-width: 0;
   margin-bottom: var(--footer-link-height);
-  padding-block: calc(var(--site-header-space) + clamp(20px, 6svh, 76px))
-    clamp(20px, 6svh, 76px);
+  padding-block: calc(var(--site-header-space) + clamp(12px, 3svh, 48px))
+    clamp(12px, 3svh, 48px);
 }
 
 .entry-copy {
@@ -26,7 +26,7 @@
 }
 
 .entry-copy h1 {
-  font-size: clamp(60px, 6.9vw, 96px);
+  font-size: clamp(2.25rem, min(5.6vw, 8svh), 5rem);
   font-weight: 510;
   letter-spacing: -0.04em;
   line-height: 0.99;
@@ -238,8 +238,7 @@ a.entry-primary:hover {
   }
 
   .entry-copy h1 {
-    max-width: 11ch;
-    font-size: clamp(51px, 9.3vw, 66px);
+    font-size: clamp(2.25rem, min(9.3vw, 8svh), 3.75rem);
     line-height: 1;
   }
 
@@ -264,10 +263,6 @@ a.entry-primary:hover {
 
   .entry-gradient {
     height: calc(var(--site-header-space) + 90px);
-  }
-
-  .entry-copy h1 {
-    font-size: clamp(40px, 9vw, 56px);
   }
 
   .entry-intro {
