@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import AdminLoading from "../loading";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/components/admin/access";
@@ -30,8 +32,17 @@ export default async function AdminEventPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ tab?: string }>;
 }) {
-  await requireAdmin();
   const [{ id }, query] = await Promise.all([params, searchParams]);
+  const tab = tabs.find((value) => value === query.tab) || "overview";
+  return (
+    <Suspense key={`${id}/${tab}`} fallback={<AdminLoading />}>
+      <AdminEventContent id={id} tab={tab} />
+    </Suspense>
+  );
+}
+
+async function AdminEventContent({ id, tab }: { id: string; tab: typeof tabs[number] }) {
+  await requireAdmin();
   const event = await prisma.hackathon.findUnique({
     where: { id },
     include: {
@@ -47,7 +58,6 @@ export default async function AdminEventPage({
     },
   });
   if (!event) notFound();
-  const tab = tabs.find((value) => value === query.tab) || "overview";
   return (
     <>
       <Link href="/admin" className={styles.backLink}>

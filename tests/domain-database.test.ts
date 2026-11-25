@@ -21,6 +21,7 @@ vi.mock("../lib/db", () => {
 });
 
 import { performMutation } from "../lib/domain";
+import { eventEditValues } from "../lib/admin-edit";
 import { joinInvitedHackathon } from "../lib/domain/participants";
 import { decryptVoucher } from "../lib/credits";
 import { authOptions } from "../lib/auth";
@@ -112,6 +113,23 @@ suite("isolated PostgreSQL domain integration", () => {
     expect(await db.participant.findUnique({ where: { id: imported.id } })).toMatchObject({ userId: people[1].id });
     await db.participant.update({ where: { id: imported.id }, data: { revokedAt: new Date() } });
     expect(await joinInvitedHackathon(eventId, people[1])).toBeNull();
+  });
+
+  it("merges concurrent organizer edits and rejects conflicting stale drafts atomically", async () => {
+    const event = await db.hackathon.findUniqueOrThrow({ where: { id: eventId } });
+    const original = eventEditValues(event, []);
+    const draft = (fields: Record<string, string>) => data({
+      ...original, id: eventId, original: JSON.stringify(original), ...fields,
+    });
+    const otherAdmin = { ...people[1], isAdmin: true };
+    await Promise.all([
+      performMutation("event.save", draft({ title: "New title", schedule: JSON.stringify([{ time: "9am", label: "Doors" }]) }), people[0]),
+      performMutation("event.save", draft({ location: "New venue", schedule: JSON.stringify([{ time: "10am", label: "Start" }]) }), otherAdmin),
+    ]);
+    await expect(performMutation("event.save", draft({ title: "Conflict", tagline: "Must not save" }), otherAdmin)).rejects.toThrow("Another admin changed title");
+    const saved = await db.hackathon.findUniqueOrThrow({ where: { id: eventId } });
+    expect(saved).toMatchObject({ title: "New title", location: "New venue", tagline: "" });
+    expect(saved.schedule).toEqual(expect.arrayContaining([{ time: "9am", label: "Doors" }, { time: "10am", label: "Start" }]));
   });
 
   async function teamFor(person: Viewer) {

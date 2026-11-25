@@ -3,12 +3,15 @@ import { windowIsOpen } from "@/lib/validation";
 import { ActionForm } from "@/components/ActionForm";
 import { eventDate } from "../format";
 import styles from "../styles";
+import { LiveEditor } from "../LiveEditor";
 import { Status } from "./Status";
 import type { EventDetails } from "./types";
 
 export function Overview({ event }: { event: EventDetails }) {
   const submissionsOpen = windowIsOpen(event, "submission");
   const votingOpen = windowIsOpen(event, "voting");
+  const statusValues = JSON.stringify({ status: event.status });
+  const windowValues = JSON.stringify({ submissionsClosed: event.submissionsClosed ? "on" : "", votingClosed: event.votingClosed ? "on" : "" });
   return (
     <>
       <div className={styles.metrics}>
@@ -96,7 +99,9 @@ export function Overview({ event }: { event: EventDetails }) {
               <h2>Event controls</h2>
             </div>
             <div className={styles.sectionBody}>
+              <LiveEditor version={statusValues}>
               <ActionForm intent="event.status">
+                <input type="hidden" name="original" value={statusValues} />
                 <input type="hidden" name="hackathonId" value={event.id} />
                 <label className={styles.field}>
                   Event status
@@ -116,12 +121,15 @@ export function Overview({ event }: { event: EventDetails }) {
                   Update status
                 </button>
               </ActionForm>
+              </LiveEditor>
               <p className={styles.subtle} style={{ marginTop: 14 }}>
                 Ending an event closes submissions and voting. Its gallery stays
                 public, and unexpired credits remain claimable.
               </p>
               <hr className={styles.divider} />
+              <LiveEditor version={windowValues}>
               <ActionForm intent="event.windows">
+                <input type="hidden" name="original" value={windowValues} />
                 <input type="hidden" name="hackathonId" value={event.id} />
                 <div className={styles.stack}>
                   <label className={styles.check}>
@@ -147,6 +155,7 @@ export function Overview({ event }: { event: EventDetails }) {
                   </div>
                 </div>
               </ActionForm>
+              </LiveEditor>
             </div>
           </section>
         </div>

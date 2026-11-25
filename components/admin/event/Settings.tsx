@@ -1,12 +1,13 @@
 import { ActionForm } from "@/components/ActionForm";
 import EventForm from "../EventForm";
+import { LiveEditor } from "../LiveEditor";
 import styles from "../styles";
 import type { EventDetails } from "./types";
 
 export function Settings({ event }: { event: EventDetails }) {
   return (
     <>
-      <EventForm event={event} />
+      <LiveEditor version={event.updatedAt.toISOString()}><EventForm event={event} /></LiveEditor>
       <section className={styles.section}>
         <div className={styles.sectionHead}>
           <div>

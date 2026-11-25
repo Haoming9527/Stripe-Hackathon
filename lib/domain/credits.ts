@@ -1,6 +1,8 @@
 import "server-only";
 import { Prisma } from "@prisma/client";
 import { db } from "../db";
+import { mergeAdminEdit } from "./merge-admin-edit";
+import { offerEditValues } from "../admin-edit";
 import { decryptVoucher, encryptVoucher, voucherFingerprint } from "../credits";
 import type { Viewer } from "../types";
 import {
@@ -41,23 +43,25 @@ export async function saveCreditOffer(
   const id = field(form, "id", 100);
   await serializable(async (tx) => {
     const event = await eventById(tx, hackathonId);
+    let values = form;
     if (id) {
       const existing = await tx.creditOffer.findUnique({ where: { id } });
       assert(
         existing?.hackathonId === hackathonId,
         "That credit offer belongs to another event.",
       );
+      values = mergeAdminEdit(form, offerEditValues(existing, event.timezone));
     }
-    const expiry = field(form, "expiresAt", 50);
+    const expiry = field(values, "expiresAt", 50);
     const data = {
       hackathonId,
-      name: required(form, "name", "an offer name", 150),
-      sponsor: field(form, "sponsor", 100),
-      description: field(form, "description", 10_000),
-      valueLabel: field(form, "valueLabel", 100),
-      instructions: field(form, "instructions", 10_000),
+      name: required(values, "name", "an offer name", 150),
+      sponsor: field(values, "sponsor", 100),
+      description: field(values, "description", 10_000),
+      valueLabel: field(values, "valueLabel", 100),
+      instructions: field(values, "instructions", 10_000),
       redemptionUrl: safeUrl(
-        field(form, "redemptionUrl", 2048),
+        field(values, "redemptionUrl", 2048),
         "redemption URL",
         true,
       ),

@@ -256,6 +256,7 @@ describe("registrations after a verified address change", () => {
       participantId: linked.id,
       email: linked.normalizedEmail,
       name: "Updated",
+      original: JSON.stringify({ name: "", email: linked.normalizedEmail }),
     }))
       form.set(key, value);
     await manageParticipant(form, { ...viewer, isAdmin: true }, "update");

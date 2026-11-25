@@ -1,5 +1,6 @@
 import "server-only";
 import { db } from "../db";
+import { mergeAdminEdit } from "./merge-admin-edit";
 import type { Viewer } from "../types";
 import { findParticipant } from "../queries";
 import {
@@ -136,11 +137,12 @@ export async function manageParticipant(
         });
       return;
     }
+    const values = member ? mergeAdminEdit(form, { name: member.name ?? "", email: member.normalizedEmail }) : form;
     const normalizedEmail = normalizeEmail(
-      required(form, "email", "an email address", 320),
+      required(values, "email", "an email address", 320),
     );
     assert(isEmail(normalizedEmail), "Enter a valid email address.");
-    const name = field(form, "name", 120) || null;
+    const name = field(values, "name", 120) || null;
     if (member && normalizedEmail !== member.normalizedEmail) {
       assert(
         !member.userId &&

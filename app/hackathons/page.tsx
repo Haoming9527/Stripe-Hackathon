@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { NavigationIcon } from "@/components/NavigationIcon";
 import { eventDate } from "@/lib/presentation";
 import { listPublicEvents } from "@/lib/queries";
 
@@ -46,7 +47,9 @@ export default async function HackathonsPage() {
                       {event._count.projects === 1 ? "project" : "projects"}
                     </span>
                   </div>
-                  <ArrowRight className="directory-arrow" size={18} aria-hidden="true" />
+                  <NavigationIcon>
+                    <ArrowRight className="directory-arrow" size={18} />
+                  </NavigationIcon>
                 </div>
               </Link>
             </li>

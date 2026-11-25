@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NavigationIcon } from "@/components/NavigationIcon";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, Search } from "lucide-react";
 import { prisma } from "@/lib/db";
@@ -150,7 +151,8 @@ export default async function GalleryPage({
                   href={`/hackathons/${slug}/portal`}
                   className="button button-primary"
                 >
-                  Open participant portal <ArrowRight size={16} />
+                  Open participant portal
+                  <NavigationIcon><ArrowRight size={16} /></NavigationIcon>
                 </Link>
               ) : !viewer ? (
                 <GoogleSignInButton

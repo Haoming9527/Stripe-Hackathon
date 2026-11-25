@@ -52,7 +52,7 @@ describe("server authorization", () => {
 
   it("prevents transferring an existing participant identity", async () => {
     mocked.tx.participant.findUnique.mockResolvedValue({ id: "p", hackathonId: "event-1", normalizedEmail: "old@example.com", userId: "u", _count: { vouchers: 0, invitations: 0 } });
-    await expect(performMutation("participants.update", form({ hackathonId: "event-1", participantId: "p", email: "new@example.com" }), admin)).rejects.toThrow("Email cannot change");
+    await expect(performMutation("participants.update", form({ hackathonId: "event-1", participantId: "p", original: JSON.stringify({ name: "", email: "old@example.com" }), email: "new@example.com" }), admin)).rejects.toThrow("Email cannot change");
     expect(mocked.tx.participant.update).not.toHaveBeenCalled();
   });
 

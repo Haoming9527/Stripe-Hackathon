@@ -2,6 +2,7 @@ import "server-only";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, Code2, Gift, Users } from "lucide-react";
 import type { PortalData } from "./data";
+import { NavigationIcon } from "@/components/NavigationIcon";
 
 export function PortalHeader({
   event,
@@ -28,7 +29,7 @@ export function PortalHeader({
           href={isDraftPreview ? `/admin/${event.id}` : `/hackathons/${slug}`}
           className="back-link"
         >
-          <ArrowLeft size={15} />
+          <NavigationIcon><ArrowLeft size={15} /></NavigationIcon>
           {isDraftPreview ? "Back to admin" : "Event gallery"}
         </Link>
         <div className="page-heading">
@@ -54,7 +55,7 @@ export function PortalHeader({
               className={`tab ${tab === item.id ? "tab-active" : ""}`}
               aria-current={tab === item.id ? "page" : undefined}
             >
-              <item.icon size={16} />
+              <NavigationIcon><item.icon size={16} /></NavigationIcon>
               {item.label}
               {item.id === "team" && hasInvitations && (
                 <span className="notification-dot" role="img" aria-label="Pending invitations" />

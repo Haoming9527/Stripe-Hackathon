@@ -1,7 +1,10 @@
 "use client";
 
-import { startTransition, useActionState, type ReactNode } from "react";
+import { createContext, startTransition, useActionState, useContext, type ReactNode } from "react";
 import { submitAction } from "@/lib/actions";
+import type { ActionState } from "@/lib/types";
+
+export const EditSavedContext = createContext<((message: string) => void) | null>(null);
 
 function FormContents({
   children,
@@ -33,7 +36,12 @@ export function ActionForm({
   className?: string;
   successMessage?: string;
 }) {
-  const [state, action, pending] = useActionState(submitAction, {
+  const onSaved = useContext(EditSavedContext);
+  const [state, action, pending] = useActionState(async (previous: ActionState, data: FormData) => {
+    const result = await submitAction(previous, data);
+    if (result.success) onSaved?.(result.message);
+    return result;
+  }, {
     success: false,
     message: "",
   });

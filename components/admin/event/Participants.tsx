@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { CopyButton } from "@/components/CopyButton";
 import { participantInvitePath } from "@/lib/participant-invite";
 import { ParticipantEditor } from "../ParticipantEditor";
+import { LiveEditor } from "../LiveEditor";
 import { ParticipantImportForm } from "../ImportForms";
 import { eventDate } from "../format";
 import styles from "../styles";
@@ -128,11 +129,12 @@ export async function Participants({ event }: { event: Hackathon }) {
                       <details className={styles.participantEditor}>
                         <summary>Edit participant</summary>
                         <div>
+                          <LiveEditor version={JSON.stringify([participant.normalizedEmail, participant.name, participant.revokedAt, participant.userId, participant.teamId, participant._count])}>
                           <ParticipantEditor
-                            key={`${participant.normalizedEmail}-${participant.name}-${!!participant.revokedAt}`}
                             hackathonId={event.id}
                             participant={participant}
                           />
+                          </LiveEditor>
                         </div>
                       </details>
                     </td>

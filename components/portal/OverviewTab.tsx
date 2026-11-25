@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { contentRows, eventDate, safeExternalUrl } from "@/lib/presentation";
 import type { PortalData } from "./data";
+import { NavigationIcon } from "@/components/NavigationIcon";
 
 export function OverviewTab({
   event,
@@ -57,7 +58,7 @@ export function OverviewTab({
             className="button button-primary"
           >
             {team ? "Open your project" : "Open team page"}
-            <ArrowRight size={16} />
+            <NavigationIcon><ArrowRight size={16} /></NavigationIcon>
           </Link>
         </div>
       </div>

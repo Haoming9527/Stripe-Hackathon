@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { Hackathon, Track } from "@prisma/client";
 import { ActionForm } from "@/components/ActionForm";
 import styles from "./styles";
+import { eventEditValues } from "@/lib/admin-edit";
 import { localDateValue } from "./format";
 
 type ContentRow = { id?: string; [key: string]: string | undefined };
@@ -109,6 +110,7 @@ export default function EventForm({
   return (
     <ActionForm intent="event.save">
       {event && <input type="hidden" name="id" value={event.id} />}
+      {event && <input type="hidden" name="original" value={JSON.stringify(eventEditValues(event, event.tracks))} />}
       <section className={styles.formSection}>
         <h2>Make it your event</h2>
         <p>

@@ -1,6 +1,8 @@
 import type { Hackathon } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import OfferForm from "../OfferForm";
+import { LiveEditor } from "../LiveEditor";
+import { offerEditValues } from "@/lib/admin-edit";
 import { CreditAllocationForm, VoucherImportForm } from "../ImportForms";
 import { eventDate } from "../format";
 import styles from "../styles";
@@ -157,11 +159,13 @@ export async function Credits({ event }: { event: Hackathon }) {
                 Edit offer details
               </summary>
               <div style={{ marginTop: 22 }}>
+                <LiveEditor version={JSON.stringify(offerEditValues(offer, event.timezone))}>
                 <OfferForm
                   hackathonId={event.id}
                   timezone={event.timezone}
                   offer={offer}
                 />
+                </LiveEditor>
               </div>
             </details>
           </section>

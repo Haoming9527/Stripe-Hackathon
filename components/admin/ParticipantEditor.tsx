@@ -11,6 +11,7 @@ export function ParticipantEditor({ hackathonId, participant }: {
       <ActionForm intent={participant ? "participants.update" : "participants.create"} className="stack">
         <input type="hidden" name="hackathonId" value={hackathonId} />
         {participant && <input type="hidden" name="participantId" value={participant.id} />}
+        {participant && <input type="hidden" name="original" value={JSON.stringify({ name: participant.name ?? "", email: participant.normalizedEmail })} />}
         <label className={styles.field}>Name (optional)
           <input name="name" defaultValue={participant?.name || ""} maxLength={120} autoComplete="off" />
         </label>

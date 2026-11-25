@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AdminLiveUpdates } from "@/components/admin/AdminLiveUpdates";
 import { SINGAPORE_COMMUNITY_URL } from "@/lib/community";
 import { redirect } from "next/navigation";
 import { getViewer } from "@/lib/auth";
@@ -33,6 +34,7 @@ export default async function AdminLayout({
   }
   return (
     <div className={styles.workspace}>
+      <AdminLiveUpdates />
       <aside className={styles.sidebar}>
         <nav className={styles.navigation} aria-label="Admin navigation">
           <Link className={styles.navLink} href="/admin">

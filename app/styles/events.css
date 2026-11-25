@@ -135,12 +135,16 @@
   column-gap: 10px;
   min-width: 0;
 }
-.directory-card-footer span + span::before {
+.directory-card-footer > div > span + span::before {
   content: "·";
   margin-right: 10px;
 }
-.directory-arrow {
+.directory-card-footer .navigation-icon {
+  width: 18px;
+  height: 18px;
   color: var(--purple);
+}
+.directory-arrow {
   transition: transform 0.18s ease-out;
 }
 .directory-card:hover h2,

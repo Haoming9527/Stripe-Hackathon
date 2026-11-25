@@ -2,6 +2,7 @@ import type { CreditOffer } from "@prisma/client";
 import { ActionForm } from "@/components/ActionForm";
 import { localDateValue } from "./format";
 import styles from "./styles";
+import { offerEditValues } from "@/lib/admin-edit";
 
 export default function OfferForm({
   hackathonId,
@@ -16,6 +17,7 @@ export default function OfferForm({
     <ActionForm intent="credits.offer.save">
       <input type="hidden" name="hackathonId" value={hackathonId} />
       {offer && <input type="hidden" name="id" value={offer.id} />}
+      {offer && <input type="hidden" name="original" value={JSON.stringify(offerEditValues(offer, timezone))} />}
       <div className={styles.fields}>
         <div className={styles.columns}>
           <label className={styles.field}>

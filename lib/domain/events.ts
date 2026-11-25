@@ -1,4 +1,7 @@
 import "server-only";
+import type { Hackathon, Prisma } from "@prisma/client";
+import { mergeAdminEdit } from "./merge-admin-edit";
+import { eventEditValues, type EditValues } from "../admin-edit";
 import type { Viewer } from "../types";
 import {
   assert,
@@ -53,6 +56,24 @@ export async function saveEvent(
 ): Promise<MutationResult> {
   admin(viewer);
   const id = field(form, "id", 100);
+  const event = await serializable(async (tx) => {
+    const existing = id ? await eventById(tx, id) : null;
+    if (existing) {
+      const tracks = await tx.track.findMany({ where: { hackathonId: id }, orderBy: { position: "asc" } });
+      const current = eventEditValues(existing, tracks);
+      const merged = mergeAdminEdit(form, current, ["tracks", "resources", "schedule", "prizes"]);
+      return persistEvent(tx, merged, existing, current);
+    }
+    return persistEvent(tx, form, null);
+  });
+  return {
+    message: "Hackathon saved.",
+    redirectTo: id ? undefined : `/admin/${event.id}`,
+  };
+}
+
+async function persistEvent(tx: Prisma.TransactionClient, form: FormData, existing: Hackathon | null, current?: EditValues) {
+  const id = existing?.id ?? "";
   const title = required(form, "title", "an event title", 150);
   const slug = required(form, "slug", "an event URL", 80).toLowerCase();
   assert(
@@ -133,123 +154,124 @@ export async function saveEvent(
     !requestedStatus || ["DRAFT", "ACTIVE", "ENDED"].includes(requestedStatus),
     "Choose a valid event status.",
   );
-  const event = await serializable(async (tx) => {
-    const existing = id ? await eventById(tx, id) : null;
-    const status = (requestedStatus || existing?.status || "DRAFT") as
-      "DRAFT" | "ACTIVE" | "ENDED";
-    assert(
-      !existing || existing.status === "DRAFT" || existing.slug === slug,
-      "A published event's URL cannot be changed.",
-    );
-    assert(
-      !existing || existing.status === "DRAFT" || status !== "DRAFT",
-      "Published events cannot become drafts again. End the event instead.",
-    );
-    if (existing) {
-      const teams = await tx.team.findMany({
-        where: { hackathonId: id },
-        include: { _count: { select: { members: true } } },
-      });
-      assert(
-        teams.every((team) => team._count.members <= maxTeamSize),
-        "The team limit is smaller than an existing team. Keep the current limit or increase it.",
-      );
-      const ballots = await tx.vote.groupBy({
-        by: ["userId"],
-        where: { hackathonId: id },
-        _count: { id: true },
-      });
-      assert(
-        ballots.every((ballot) => ballot._count.id <= votesPerUser),
-        "The vote allowance is smaller than votes already cast. Keep the current allowance or increase it.",
-      );
-      const projects = await tx.project.findMany({
-        where: { hackathonId: id },
-        include: { _count: { select: { tracks: true } } },
-      });
-      assert(
-        projects.every(
-          (project) => project._count.tracks <= maxTrackSelections,
-        ),
-        "The track limit is smaller than an existing project's selections.",
-      );
-    }
-    const taken = await tx.hackathon.findUnique({ where: { slug } });
-    assert(!taken || taken.id === id, "That event URL is already in use.");
-    const data = {
-      title,
-      slug,
-      timezone,
-      startsAt,
-      endsAt,
-      submissionOpensAt,
-      submissionClosesAt,
-      votingOpensAt,
-      votingClosesAt,
-      maxTeamSize,
-      votesPerUser,
-      maxTrackSelections,
-      status,
-      tagline: field(form, "tagline", 250),
-      description: field(form, "description", 20_000),
-      location: field(form, "location", 250),
-      meetingUrl: safeUrl(field(form, "meetingUrl", 2048), "meeting URL", true),
-      attendeeInfo: field(form, "attendeeInfo", 20_000),
-      schedule,
-      resources,
-      prizes,
-      ...(status === "ENDED"
-        ? { submissionsClosed: true, votingClosed: true }
-        : {}),
-    };
-    const saved = existing
-      ? await tx.hackathon.update({ where: { id }, data })
-      : await tx.hackathon.create({ data });
-    const oldTracks = await tx.track.findMany({
-      where: { hackathonId: saved.id },
-      include: { _count: { select: { projects: true } } },
+  const status = (requestedStatus || existing?.status || "DRAFT") as
+    "DRAFT" | "ACTIVE" | "ENDED";
+  assert(
+    !existing || existing.status === "DRAFT" || existing.slug === slug,
+    "A published event's URL cannot be changed.",
+  );
+  assert(
+    !existing || existing.status === "DRAFT" || status !== "DRAFT",
+    "Published events cannot become drafts again. End the event instead.",
+  );
+  if (existing) {
+    const teams = await tx.team.findMany({
+      where: { hackathonId: id },
+      include: { _count: { select: { members: true } } },
     });
-    const oldIds = new Set(oldTracks.map((track) => track.id));
-    for (const track of tracks)
-      assert(
-        !track.id || oldIds.has(track.id),
-        "One of the tracks belongs to another event.",
-      );
-    const keptIds = new Set(tracks.map((track) => track.id).filter(Boolean));
-    const removed = oldTracks.filter((track) => !keptIds.has(track.id));
     assert(
-      removed.every((track) => track._count.projects === 0),
-      "A track used by a project cannot be removed.",
+      teams.every((team) => team._count.members <= maxTeamSize),
+      "The team limit is smaller than an existing team. Keep the current limit or increase it.",
     );
-    if (removed.length)
-      await tx.track.deleteMany({
-        where: { id: { in: removed.map((track) => track.id) } },
-      });
-    // Temporary names allow admins to swap two existing track names safely.
-    for (const track of tracks.filter((track) => track.id))
-      await tx.track.update({
-        where: { id: track.id },
-        data: { name: `__updating_${track.id}` },
-      });
-    for (const track of tracks) {
-      const trackData = {
-        name: track.name,
-        description: track.description,
-        position: track.position,
-      };
-      if (track.id)
-        await tx.track.update({ where: { id: track.id }, data: trackData });
-      else
-        await tx.track.create({
-          data: { ...trackData, hackathonId: saved.id },
-        });
-    }
-    return saved;
-  });
-  return {
-    message: "Hackathon saved.",
-    redirectTo: id ? undefined : `/admin/${event.id}`,
+    const ballots = await tx.vote.groupBy({
+      by: ["userId"],
+      where: { hackathonId: id },
+      _count: { id: true },
+    });
+    assert(
+      ballots.every((ballot) => ballot._count.id <= votesPerUser),
+      "The vote allowance is smaller than votes already cast. Keep the current allowance or increase it.",
+    );
+    const projects = await tx.project.findMany({
+      where: { hackathonId: id },
+      include: { _count: { select: { tracks: true } } },
+    });
+    assert(
+      projects.every(
+        (project) => project._count.tracks <= maxTrackSelections,
+      ),
+      "The track limit is smaller than an existing project's selections.",
+    );
+  }
+  const taken = await tx.hackathon.findUnique({ where: { slug } });
+  assert(!taken || taken.id === id, "That event URL is already in use.");
+  const data = {
+    title,
+    slug,
+    timezone,
+    startsAt,
+    endsAt,
+    submissionOpensAt,
+    submissionClosesAt,
+    votingOpensAt,
+    votingClosesAt,
+    maxTeamSize,
+    votesPerUser,
+    maxTrackSelections,
+    status,
+    tagline: field(form, "tagline", 250),
+    description: field(form, "description", 20_000),
+    location: field(form, "location", 250),
+    meetingUrl: safeUrl(field(form, "meetingUrl", 2048), "meeting URL", true),
+    attendeeInfo: field(form, "attendeeInfo", 20_000),
+    schedule,
+    resources,
+    prizes,
+    ...(status === "ENDED"
+      ? { submissionsClosed: true, votingClosed: true }
+      : {}),
   };
+  // Only persist edited fields. In particular, untouched timestamps retain seconds
+  // and untouched JSON lists retain any fields from earlier event formats.
+  const changes = Object.fromEntries(Object.entries(data).filter(([key]) =>
+    !current || (key in current ? form.get(key) !== current[key] ||
+      (key.endsWith("At") && timezone !== current.timezone) : status !== current.status)
+  ));
+  const tracksChanged = !current || form.get("tracks") !== current.tracks;
+  const saved = existing
+    ? await tx.hackathon.update({ where: { id }, data: { ...changes, ...(tracksChanged ? { updatedAt: new Date() } : {}) } })
+    : await tx.hackathon.create({ data });
+  if (!tracksChanged) return saved;
+  const oldTracks = await tx.track.findMany({
+    where: { hackathonId: saved.id },
+    include: { _count: { select: { projects: true } } },
+  });
+  const oldIds = new Set(oldTracks.map((track) => track.id));
+  for (const track of tracks)
+    assert(
+      !track.id || oldIds.has(track.id),
+      "One of the tracks belongs to another event.",
+    );
+  const keptIds = new Set(tracks.map((track) => track.id).filter(Boolean));
+  const removed = oldTracks.filter((track) => !keptIds.has(track.id));
+  assert(
+    removed.every((track) => track._count.projects === 0),
+    "A track used by a project cannot be removed.",
+  );
+  if (removed.length)
+    await tx.track.deleteMany({
+      where: { id: { in: removed.map((track) => track.id) } },
+    });
+  // Temporary names allow admins to swap two existing track names safely.
+  for (const track of tracks.filter((track) => track.id))
+    await tx.track.update({
+      where: { id: track.id },
+      data: { name: `__updating_${track.id}` },
+    });
+  for (const track of tracks) {
+    const trackData = {
+      name: track.name,
+      description: track.description,
+      position: track.position,
+    };
+    if (track.id)
+      await tx.track.update({ where: { id: track.id }, data: trackData });
+    else
+      await tx.track.create({
+        data: { ...trackData, hackathonId: saved.id },
+      });
+  }
+  return saved;
 }
 
 export async function deleteEvent(
@@ -286,6 +308,10 @@ export async function changeEvent(
   await serializable(async (tx) => {
     const event = await eventById(tx, id);
     if (windows) {
+      const values = mergeAdminEdit(form, {
+        submissionsClosed: event.submissionsClosed ? "on" : "",
+        votingClosed: event.votingClosed ? "on" : "",
+      });
       assert(
         event.status !== "ENDED",
         "Reactivate the event before reopening submissions or voting.",
@@ -293,12 +319,12 @@ export async function changeEvent(
       await tx.hackathon.update({
         where: { id },
         data: {
-          submissionsClosed: flag(form, "submissionsClosed"),
-          votingClosed: flag(form, "votingClosed"),
+          submissionsClosed: flag(values, "submissionsClosed"),
+          votingClosed: flag(values, "votingClosed"),
         },
       });
     } else {
-      const status = field(form, "status", 20);
+      const status = field(mergeAdminEdit(form, { status: event.status }), "status", 20);
       assert(
         status === "DRAFT" || status === "ACTIVE" || status === "ENDED",
         "Choose a valid status.",
