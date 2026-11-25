@@ -143,6 +143,17 @@ suite("isolated PostgreSQL domain integration", () => {
     return db.project.findUniqueOrThrow({ where: { teamId: team.id } });
   }
 
+  it("allows a team to form below the minimum but requires the exact roster before publishing", async () => {
+    await db.hackathon.update({ where: { id: eventId }, data: { minTeamSize: 2, maxTeamSize: 2 } });
+    const team = await teamFor(people[1]);
+    const fields = { hackathonId: eventId, teamId: team.id, name: "Pair project", description: "Pair demo", videoUrl: "https://example.com/demo", githubUrl: "https://github.com/community/project", publish: "true", consent: "on" };
+    await expect(performMutation("project.save", data(fields), people[1])).rejects.toThrow("at least 2 members");
+    await db.participant.updateMany({ where: { hackathonId: eventId, userId: people[2].id }, data: { teamId: team.id } });
+    fields.videoUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+    await performMutation("project.save", data(fields), people[1]);
+    expect(await db.project.findUnique({ where: { teamId: team.id } })).toMatchObject({ status: "SUBMITTED" });
+  });
+
   it("only accepts one simultaneous invitation into the final team seat", async () => {
     const team = await teamFor(people[0]);
     const invited = await db.participant.findMany({ where: { hackathonId: eventId, userId: { in: [people[1].id, people[2].id] } } });

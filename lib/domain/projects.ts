@@ -48,7 +48,7 @@ export async function saveProject(
     const member = await participant(tx, hackathonId, viewer);
     assert(
       member.teamId,
-      "Create or join a team before starting a project. Solo teams are welcome.",
+      "Create or join a team before starting a project.",
     );
     const team = await tx.team.findUnique({
       where: { id: member.teamId },
@@ -74,6 +74,8 @@ export async function saveProject(
     let videoUrl = video;
     let repositoryUrl = github;
     if (isPublic) {
+      assert(team.members.length >= (event.minTeamSize ?? 1),
+        `Your team needs at least ${event.minTeamSize} members to publish.`);
       assert(description, "Describe what your project does.");
       videoUrl = safeUrl(video, "video URL")!;
       repositoryUrl = githubUrl(github);

@@ -93,6 +93,8 @@ model Hackathon {
   submissionsClosed   Boolean @default(false)
   votingClosed        Boolean @default(false)
   maxTeamSize         Int @default(4)
+  minTeamSize         Int @default(1)
+  teamSizeCeiling     Int @default(4)
   votesPerUser        Int @default(3)
   maxTrackSelections  Int @default(1)
   meetingUrl          String?

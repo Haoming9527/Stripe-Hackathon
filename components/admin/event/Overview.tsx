@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { teamSizeLabel } from "@/lib/team-size";
 import { EventDescription } from "@/components/EventDescription";
 import { windowIsOpen } from "@/lib/validation";
 import { ActionForm } from "@/components/ActionForm";
@@ -60,7 +61,7 @@ export function Overview({ event }: { event: EventDetails }) {
               <div>
                 <p className={styles.subtle}>Team size</p>
                 <strong style={{ fontSize: 14 }}>
-                  1–{event.maxTeamSize} participants
+                  {teamSizeLabel(event.minTeamSize, event.maxTeamSize)}
                 </strong>
               </div>
               <div>

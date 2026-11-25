@@ -1,4 +1,5 @@
 import "server-only";
+import { teamSizeLabel } from "@/lib/team-size";
 import { LockKeyhole, Mail, Plus, Users } from "lucide-react";
 import { ActionForm } from "@/components/ActionForm";
 import type { PortalData } from "./data";
@@ -27,8 +28,7 @@ export function TeamTab({
         <div>
           <h2>{team ? team.name : "Your team"}</h2>
           <p className="muted">
-            Each team shares one project and can have up to {event.maxTeamSize}{" "}
-            {event.maxTeamSize === 1 ? "member" : "members"}.
+            Each team submits one project with {teamSizeLabel(event.minTeamSize, event.maxTeamSize)}.
           </p>
         </div>
         {team && (
@@ -176,7 +176,7 @@ export function TeamTab({
           <div className="panel">
             <h3>Start a team</h3>
             <p className="muted">
-              Create a team to submit a project, even if you’re working solo.
+              Create a team or accept an invitation to work on a project.
             </p>
             <ActionForm intent="team.create" className="stack">
               <input type="hidden" name="hackathonId" value={event.id} />

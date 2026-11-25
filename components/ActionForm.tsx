@@ -30,11 +30,13 @@ export function ActionForm({
   children,
   className = "",
   successMessage,
+  requireSubmitButton = false,
 }: {
   intent: string;
   children: ReactNode;
   className?: string;
   successMessage?: string;
+  requireSubmitButton?: boolean;
 }) {
   const onSaved = useContext(EditSavedContext);
   const [state, action, pending] = useActionState(async (previous: ActionState, data: FormData) => {
@@ -49,12 +51,21 @@ export function ActionForm({
     <form
       action={action}
       className={className}
+      onKeyDown={(event) => {
+        if (
+          requireSubmitButton &&
+          event.key === "Enter" &&
+          !event.nativeEvent.isComposing &&
+          event.target instanceof HTMLInputElement
+        ) event.preventDefault();
+      }}
       onSubmit={(event) => {
         // React form actions reset uncontrolled inputs even when the server
         // returns validation errors. Dispatch explicitly to preserve edits.
         event.preventDefault();
         if (pending) return;
         const submitter = (event.nativeEvent as SubmitEvent).submitter;
+        if (requireSubmitButton && !submitter) return;
         const data = new FormData(event.currentTarget, submitter);
         startTransition(() => action(data));
       }}

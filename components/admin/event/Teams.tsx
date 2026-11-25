@@ -1,4 +1,5 @@
 import type { Hackathon } from "@prisma/client";
+import { teamSizeLabel } from "@/lib/team-size";
 import { prisma } from "@/lib/db";
 import styles from "../styles";
 import { Status } from "./Status";
@@ -23,7 +24,7 @@ export async function Teams({ event }: { event: Hackathon }) {
         <div>
           <h2>Teams taking shape</h2>
           <p>
-            Maximum {event.maxTeamSize} members per team. Rosters lock when a
+            {teamSizeLabel(event.minTeamSize, event.maxTeamSize)} per team at submission. Rosters lock when a
             project is first published.
           </p>
         </div>

@@ -44,6 +44,9 @@ export function LiveEditor({
       <div
         onChangeCapture={preserveDraft}
         onSubmitCapture={preserveDraft}
+        onPointerDownCapture={event => {
+          if (event.target instanceof Element && event.target.closest("fieldset")?.querySelector("input[type=range]")) preserveDraft();
+        }}
         onClickCapture={(event) => {
           if (
             event.target instanceof Element &&

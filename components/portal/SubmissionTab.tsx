@@ -40,7 +40,7 @@ export function SubmissionTab({
         <div className="empty-state">
           <Code2 size={32} />
           <h3>Join or create a team</h3>
-          <p>Create a solo team or accept an invitation before submitting.</p>
+          <p>Create a team or accept an invitation before submitting.</p>
           <Link href={`${base}?tab=team`} className="button button-primary">
             Open your team <ArrowRight size={16} />
           </Link>

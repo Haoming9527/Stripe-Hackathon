@@ -5,6 +5,7 @@ import type { Hackathon, Track } from "@prisma/client";
 import { ActionForm } from "@/components/ActionForm";
 import { EventDescription } from "@/components/EventDescription";
 import styles from "./styles";
+import { TeamSizeRange } from "./TeamSizeRange";
 import { eventEditValues } from "@/lib/admin-edit";
 import { localDateValue } from "./format";
 
@@ -110,7 +111,7 @@ export default function EventForm({
   const [zone, setZone] = useState(timezone);
   const [description, setDescription] = useState(event?.description ?? "");
   return (
-    <ActionForm intent="event.save">
+    <ActionForm intent="event.save" requireSubmitButton>
       {event && <input type="hidden" name="id" value={event.id} />}
       {event && <input type="hidden" name="original" value={JSON.stringify(eventEditValues(event, event.tracks))} />}
       <section className={styles.formSection}>
@@ -298,21 +299,11 @@ export default function EventForm({
       <section className={styles.formSection}>
         <h2>Teams, tracks, and votes</h2>
         <p>
-          Solo builders are welcome. Each team shares one project, and everyone
+          Each team shares one project, and everyone
           gets the same voting allowance.
         </p>
-        <div className={styles.columns3}>
-          <label className={styles.field}>
-            Maximum team size
-            <input
-              name="maxTeamSize"
-              type="number"
-              min={1}
-              max={100}
-              defaultValue={event?.maxTeamSize || 4}
-              required
-            />
-          </label>
+        <TeamSizeRange minimum={event?.minTeamSize ?? 1} maximum={event?.maxTeamSize ?? 4} ceiling={event?.teamSizeCeiling ?? 4} />
+        <div className={styles.columns}>
           <label className={styles.field}>
             Votes per person
             <input
@@ -420,7 +411,7 @@ export default function EventForm({
       <div className={styles.saveBar}>
         <p>
           {event
-            ? "Changes apply to this event immediately."
+            ? "Select Save event to apply your changes."
             : "Create a draft first, then invite your participants."}
         </p>
         <button className="button button-primary" type="submit">

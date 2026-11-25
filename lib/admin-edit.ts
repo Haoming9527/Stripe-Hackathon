@@ -19,6 +19,8 @@ export function eventEditValues(
     "meetingUrl",
     "attendeeInfo",
     "maxTeamSize",
+    "minTeamSize",
+    "teamSizeCeiling",
     "votesPerUser",
     "maxTrackSelections",
   ] as const)

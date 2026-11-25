@@ -120,6 +120,8 @@ async function persistEvent(tx: Prisma.TransactionClient, form: FormData, existi
   );
   assert(votingClosesAt > votingOpensAt, "Voting must close after it opens.");
   const maxTeamSize = integer(form, "maxTeamSize", 4, 1, 100);
+  const teamSizeCeiling = integer(form, "teamSizeCeiling", maxTeamSize, maxTeamSize, 100);
+  const minTeamSize = integer(form, "minTeamSize", 1, 1, maxTeamSize);
   const votesPerUser = integer(form, "votesPerUser", 3, 0, 100);
   const maxTrackSelections = integer(form, "maxTrackSelections", 1, 1, 100);
   const tracks = records(form, "tracks").map((track, position) => ({
@@ -173,6 +175,8 @@ async function persistEvent(tx: Prisma.TransactionClient, form: FormData, existi
       teams.every((team) => team._count.members <= maxTeamSize),
       "The team limit is smaller than an existing team. Keep the current limit or increase it.",
     );
+    assert(teams.every(team => !team.rosterLockedAt || team._count.members >= minTeamSize),
+      "The minimum exceeds the size of a team whose roster is already locked.");
     const ballots = await tx.vote.groupBy({
       by: ["userId"],
       where: { hackathonId: id },
@@ -206,6 +210,8 @@ async function persistEvent(tx: Prisma.TransactionClient, form: FormData, existi
     votingOpensAt,
     votingClosesAt,
     maxTeamSize,
+    minTeamSize,
+    teamSizeCeiling,
     votesPerUser,
     maxTrackSelections,
     status,
