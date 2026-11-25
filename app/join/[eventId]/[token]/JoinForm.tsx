@@ -1,6 +1,27 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useFormStatus } from "react-dom";
+import { ArrowRight } from "lucide-react";
+
+function JoinButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      className="button button-primary"
+      disabled={pending}
+      aria-busy={pending}
+    >
+      {pending ? "Joining…" : "Join hackathon"}
+      {pending ? (
+        <span className="loading-spinner" aria-hidden="true" />
+      ) : (
+        <ArrowRight size={16} aria-hidden="true" />
+      )}
+    </button>
+  );
+}
 
 export function JoinForm({
   action,
@@ -19,7 +40,7 @@ export function JoinForm({
   }, [afterSignIn]);
   return (
     <form ref={form} action={action}>
-      <button className="button button-primary">Join hackathon</button>
+      <JoinButton />
     </form>
   );
 }

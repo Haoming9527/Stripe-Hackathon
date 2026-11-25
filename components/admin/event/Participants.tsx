@@ -25,7 +25,7 @@ export async function Participants({ event }: { event: Hackathon }) {
           <div>
             <h2>Participant invitation link</h2>
             <p>
-              Anyone with this reusable link can sign in with Google and join{" "}
+              Anyone with this link can sign in with Google and join{" "}
               {event.title} while the hackathon is active.
             </p>
           </div>

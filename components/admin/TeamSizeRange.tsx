@@ -24,7 +24,7 @@ export function TeamSizeRange({
   const percent = (n: number) =>
     limit === 1 ? 0 : (100 * (n - 1)) / (limit - 1);
   function move(event: PointerEvent<HTMLDivElement>, start: boolean) {
-    if (!event.isPrimary || (!start && !drag.current)) return;
+    if (!event.isPrimary || (start ? event.button !== 0 : !drag.current)) return;
     const rect = event.currentTarget.getBoundingClientRect();
     const pointer = 1 + ((event.clientX - rect.left) / rect.width) * (limit - 1);
     if (start) {
@@ -41,8 +41,15 @@ export function TeamSizeRange({
       grabOffset.current = Math.abs(distance) <= (10 / rect.width) * (limit - 1) ? distance : 0;
     }
     const value = Math.max(1, Math.min(limit, pointer - grabOffset.current));
-    if (drag.current === "both" && value !== low)
+    const separating = drag.current === "both" && value !== low;
+    if (separating)
       drag.current = value < low ? "low" : "high";
+    if (start || separating) {
+      const focusLow = drag.current === "low" || (drag.current === "both" && low === limit);
+      event.currentTarget.querySelector<HTMLInputElement>(
+        focusLow ? '[name="minTeamSize"]' : '[name="maxTeamSize"]',
+      )?.focus({ preventScroll: true });
+    }
     if (drag.current === "low") setLow(Math.min(value, high));
     if (drag.current === "high") setHigh(Math.max(value, low));
   }

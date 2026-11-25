@@ -6,7 +6,7 @@ import {
 
 afterEach(() => vi.unstubAllEnvs());
 
-it("produces a reusable invitation bound to one hackathon", () => {
+it("produces a invitation bound to one hackathon", () => {
   vi.stubEnv("NEXTAUTH_SECRET", "unit-test-signing-secret");
   const path = participantInvitePath("first");
   expect(participantInvitePath("first")).toBe(path);
