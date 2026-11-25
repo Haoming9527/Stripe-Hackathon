@@ -3,6 +3,31 @@
   background: #f5f9fc;
 }
 
+/* The header overlays the landing route from first paint, including its loading and error states. */
+.landing-main .page-section {
+  align-self: center;
+  margin-block: var(--site-header-space) var(--footer-link-height);
+  padding-block: 12px;
+}
+
+.landing-main .page-loading-content {
+  width: 51%;
+}
+
+.landing-main .skeleton-list {
+  max-width: 37ch;
+}
+
+.landing-main .skeleton-row {
+  height: 1em;
+}
+
+.landing-main .skeleton-row:last-child {
+  width: 11rem;
+  height: 46px;
+  margin-top: 12px;
+}
+
 .entry-hero {
   position: relative;
   overflow: clip;
@@ -169,6 +194,12 @@ a.entry-primary:hover {
   inset: 0;
 }
 
+.gradient-art:is(.gradient-violet, .gradient-orchid) {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
 /* (0, 0) sits inside the lettering in both the desktop and compact crop. */
 .gradient-overlap {
   position: absolute;
@@ -177,9 +208,6 @@ a.entry-primary:hover {
   width: 610px;
   height: 297px;
   overflow: visible;
-}
-
-.gradient-overlap-edge {
   animation: overlap-sweep 9s ease-in-out infinite alternate;
 }
 
@@ -202,6 +230,36 @@ a.entry-primary:hover {
 @keyframes outer-arc {
   from { transform: translateY(-1%) rotate(-1deg); }
   to { transform: translateY(2%) rotate(1deg); }
+}
+
+/* Animate the outer clip on the compositor. The SVG clip is the static and older-browser fallback. */
+@supports (clip-path: shape(from 0% 0%, line to 100% 100%, close)) {
+  .entry-gradient {
+    animation: gradient-arc 15s ease-in-out infinite alternate;
+  }
+
+  .gradient-outer-arc {
+    animation: none;
+  }
+
+  @keyframes gradient-arc {
+    from {
+      clip-path: shape(
+        from -14.839% -10.101%,
+        curve to 81.168% 41.031% with 13.289% -2.991% / 55.276% 7.378%,
+        curve to 107.346% 102.583% with 93.038% 56.426% / 101.214% 77.887%,
+        line to 122.248% 108.324%, line to 119.979% -21.656%, line to -15% -19.3%, close
+      );
+    }
+    to {
+      clip-path: shape(
+        from -15.161% -6.201%,
+        curve to 79.003% 48.25% with 12.703% 1.886% / 54.302% 13.714%,
+        curve to 103.018% 110.679% with 90.329% 64.05% / 97.751% 85.783%,
+        line to 117.711% 116.936%, line to 119.979% -13.044%, line to -15% -15.4%, close
+      );
+    }
+  }
 }
 
 @keyframes violet-sweep {
@@ -233,7 +291,8 @@ a.entry-primary:hover {
     padding-bottom: 41px;
   }
 
-  .entry-copy {
+  .entry-copy,
+  .landing-main .page-loading-content {
     width: min(100%, 500px);
   }
 

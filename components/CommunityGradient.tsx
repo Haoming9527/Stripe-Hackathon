@@ -105,38 +105,46 @@ export function CommunityGradient() {
             <rect width="240" height="120" filter="url(#community-brush)" />
           </pattern>
         </defs>
-        <g>
-          <rect
-            x="-160"
-            y="-120"
-            width="1400"
-            height="940"
-            fill="url(#community-ground)"
-          />
-          <g className="gradient-violet">
-            <use href="#community-ink-edge" fill="url(#community-ink)" />
-          </g>
-          <g className="gradient-orchid">
-            <rect
-              x="110"
-              y="-160"
-              width="1190"
-              height="1000"
-              fill="url(#community-plum)"
-            />
-            <rect
-              x="110"
-              y="-160"
-              width="1190"
-              height="1000"
-              fill="url(#community-orchid)"
-            />
-            <path
-              d="M132-142 C515-52 744 148 1007 288 Q1116 345 1280 397 V-180 H132Z"
-              fill="url(#community-light)"
-            />
-          </g>
-        </g>
+        <rect
+          x="-160"
+          y="-120"
+          width="1400"
+          height="940"
+          fill="url(#community-ground)"
+        />
+      </svg>
+      <svg
+        className="gradient-art gradient-violet"
+        viewBox="0 0 1000 680"
+        preserveAspectRatio="none"
+        focusable="false"
+      >
+        <use href="#community-ink-edge" fill="url(#community-ink)" />
+      </svg>
+      <svg
+        className="gradient-art gradient-orchid"
+        viewBox="0 0 1000 680"
+        preserveAspectRatio="none"
+        focusable="false"
+      >
+        <rect
+          x="110"
+          y="-160"
+          width="1190"
+          height="1000"
+          fill="url(#community-plum)"
+        />
+        <rect
+          x="110"
+          y="-160"
+          width="1190"
+          height="1000"
+          fill="url(#community-orchid)"
+        />
+        <path
+          d="M132-142 C515-52 744 148 1007 288 Q1116 345 1280 397 V-180 H132Z"
+          fill="url(#community-light)"
+        />
       </svg>
       <svg
         className="gradient-overlap"
@@ -212,7 +220,7 @@ export function CommunityGradient() {
           height="220"
           fill="url(#community-violet-shade)"
         />
-        <g className="gradient-overlap-edge">
+        <g>
           <use
             href="#community-orchid-edge"
             fill="url(#community-overlap-ink)"

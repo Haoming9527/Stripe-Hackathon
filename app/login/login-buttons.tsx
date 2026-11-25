@@ -1,6 +1,5 @@
 "use client";
 
-import { signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 
@@ -56,7 +55,10 @@ export function SignOutButton() {
     <button
       type="button"
       className="button button-secondary"
-      onClick={() => signOut({ callbackUrl: "/login" })}
+      onClick={async () => {
+        const { signOut } = await import("next-auth/react");
+        await signOut({ callbackUrl: "/login" });
+      }}
     >
       Sign out
     </button>

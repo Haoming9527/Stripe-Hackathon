@@ -122,6 +122,12 @@
 @keyframes loading-spin {
   to { transform: rotate(1turn); }
 }
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
 .skeleton {
   background: linear-gradient(100deg, #edf0f6 20%, #f7f9fc 50%, #edf0f6 80%);
   background-size: 200% 100%;

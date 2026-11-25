@@ -1,3 +1,6 @@
+@import "./teams.css";
+@import "./credits.css";
+
 .portal-header {
   border-bottom: 1px solid var(--border);
   background: var(--surface);
@@ -194,5 +197,92 @@
   }
   .portal-header .tab > svg {
     display: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  .credit-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .portal-columns {
+    gap: 28px;
+  }
+  .portal-intro {
+    gap: 35px;
+  }
+}
+@media (max-width: 760px) {
+  .portal-intro {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .deadline-panel {
+    padding: 23px;
+  }
+  .portal-columns {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .portal-header h1 {
+    font-size: 31px;
+  }
+  .tabs {
+    gap: 25px;
+  }
+  .tab {
+    font-size: 12px;
+  }
+  .portal-content {
+    padding-block: 30px 50px;
+  }
+  .submission-layout {
+    grid-template-columns: 1fr;
+    gap: 25px;
+  }
+  .submission-aside {
+    order: -1;
+  }
+  .submission-aside .panel {
+    padding: 20px;
+  }
+  .submission-aside .checklist,
+  .submission-aside .aside-icon {
+    display: none;
+  }
+  .credit-grid {
+    gap: 18px;
+  }
+  .credit-card {
+    padding: 20px;
+  }
+  .credit-card-top {
+    gap: 10px;
+  }
+  .meeting-banner {
+    flex-direction: column;
+    align-items: start;
+    padding: 20px;
+    gap: 17px;
+  }
+}
+@media (max-width: 480px) {
+  .credit-grid {
+    grid-template-columns: 1fr;
+  }
+  .portal-header .badge {
+    display: none;
+  }
+  .tabs {
+    gap: 20px;
+  }
+  .tab {
+    font-size: 11px;
+    gap: 6px;
+  }
+  .tab svg {
+    width: 14px;
+  }
+  .credit-card {
+    padding: 25px;
   }
 }

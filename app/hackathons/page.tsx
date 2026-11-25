@@ -1,3 +1,4 @@
+import "@/app/styles/gallery.css";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { NavigationIcon } from "@/components/NavigationIcon";

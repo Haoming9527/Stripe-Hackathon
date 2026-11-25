@@ -4,13 +4,16 @@ import Home from "../app/page";
 import Portal from "../app/hackathons/[slug]/portal/page";
 
 const f = vi.hoisted(() => ({
-  events: vi.fn(),
+  featured: vi.fn(),
   member: vi.fn(),
   viewer: vi.fn(),
   settings: vi.fn(),
   portal: vi.fn(),
 }));
-vi.mock("@/lib/queries", () => ({ listPublicEvents: f.events, findParticipant: f.member }));
+vi.mock("@/lib/queries", () => ({ findFeaturedEvent: f.featured, findParticipant: f.member }));
+vi.mock("next/cache", () => ({
+  unstable_cache: (read: () => Promise<unknown>) => async () => JSON.parse(JSON.stringify(await read())),
+}));
 vi.mock("@/lib/auth", () => ({ getViewer: f.viewer, missingAuthSettings: f.settings }));
 vi.mock("@/components/portal/data", () => ({ loadPortal: f.portal }));
 vi.mock("@/components/portal/PortalHeader", () => ({
@@ -45,23 +48,22 @@ const portal = async (tab?: string) =>
 
 beforeEach(() => {
   vi.resetAllMocks();
-  f.events.mockResolvedValue([event]);
+  f.featured.mockResolvedValue(event);
   f.settings.mockReturnValue([]);
   f.member.mockResolvedValue(null);
   f.viewer.mockResolvedValue(null);
 });
 
-it("features the active event and a Google sign-in button for guests", async () => {
-  f.events.mockResolvedValue([{ ...event, status: "ENDED", title: "Old event" }, event]);
+it("shows the featured event and a Google sign-in button for guests", async () => {
   const html = await home();
   expect(html).toContain("Build Week");
+  expect(html).toContain(`dateTime="${event.startsAt.toISOString()}"`);
   expect(html).toContain("Sign in with Google");
-  expect(html).not.toContain("Old event");
   expect(f.member).not.toHaveBeenCalled();
 });
 
 it("renders a usable fallback when event lookup or authentication configuration is unavailable", async () => {
-  f.events.mockRejectedValue(new Error("temporarily unavailable"));
+  f.featured.mockRejectedValue(new Error("temporarily unavailable"));
   f.settings.mockReturnValue(["GOOGLE_ID"]);
   const html = await home({ callbackUrl: ["ignored"], error: "UnverifiedEmail" });
   expect(html).toContain("Singapore hackathons");

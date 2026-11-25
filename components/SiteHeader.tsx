@@ -44,8 +44,8 @@ export function SiteFooter() {
   return (
     <footer className="site-footer">
       <div className="shell footer-inner">
-        <Link href="/privacy">Privacy policy</Link>
-        <Link href="/terms">Terms of service</Link>
+        <Link href="/privacy" prefetch={false}>Privacy policy</Link>
+        <Link href="/terms" prefetch={false}>Terms of service</Link>
         <a
           href="https://github.com/Haoming9527/Stripe-Hackathon"
           target="_blank"

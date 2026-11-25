@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { getServerSession, type NextAuthOptions } from "next-auth";
 import GoogleProvider, { type GoogleProfile } from "next-auth/providers/google";
@@ -144,7 +145,8 @@ export const authOptions: NextAuthOptions = {
   },
 };
 
-export async function getViewer(): Promise<Viewer | null> {
+// The header and page share this lookup during one server render.
+export const getViewer = cache(async (): Promise<Viewer | null> => {
   if (missingAuthSettings().length) return null;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !session.user.email) return null;
@@ -155,7 +157,7 @@ export async function getViewer(): Promise<Viewer | null> {
     image: session.user.image ?? null,
     isAdmin: isAdminEmail(session.user.email),
   };
-}
+});
 
 export async function requireUser(): Promise<Viewer> {
   const viewer = await getViewer();

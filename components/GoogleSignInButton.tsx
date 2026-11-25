@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { signIn } from "next-auth/react";
 import { safeCallbackPath } from "@/lib/auth-policy";
 
 export function GoogleSignInButton({
@@ -23,6 +22,7 @@ export function GoogleSignInButton({
     setFailed(false);
     const { pathname, search, hash } = window.location;
     try {
+      const { signIn } = await import("next-auth/react");
       await signIn(
         "google",
         {

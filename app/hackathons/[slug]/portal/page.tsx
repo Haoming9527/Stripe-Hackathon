@@ -1,4 +1,5 @@
 import Link from "next/link";
+import "@/app/styles/portal.css";
 import { ArrowRight, LockKeyhole } from "lucide-react";
 import { loadPortal } from "@/components/portal/data";
 import { PortalHeader } from "@/components/portal/PortalHeader";

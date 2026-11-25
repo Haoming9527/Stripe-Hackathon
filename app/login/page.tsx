@@ -2,13 +2,15 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getViewer, missingAuthSettings } from "@/lib/auth";
 import { safeCallbackPath } from "@/lib/auth-policy";
-import { listPublicEvents, findParticipant } from "@/lib/queries";
+import { getFeaturedEvent } from "@/lib/featured-event";
+import { findParticipant } from "@/lib/queries";
 import { ArrowRight } from "lucide-react";
 import { CommunityGradient } from "@/components/CommunityGradient";
 import { eventDate } from "@/lib/presentation";
 import { LoginButtons, SignOutButton } from "./login-buttons";
 
 export const metadata: Metadata = { title: "Sign in" };
+export const revalidate = 0;
 
 const errors: Record<string, string> = {
   UnverifiedEmail:
@@ -25,13 +27,16 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const query = await searchParams;
-  const viewer = await getViewer();
-  const events = await listPublicEvents().catch(() => []);
-  const featured =
-    events.find((event) => event.status === "ACTIVE") ?? events[0];
+  const [query, viewer, featured] = await Promise.all([
+    searchParams,
+    getViewer(),
+    getFeaturedEvent().catch(() => null),
+  ]);
+  const requested = safeCallbackPath(
+    typeof query.callbackUrl === "string" ? query.callbackUrl : "/",
+  );
   const member =
-    viewer && featured && !viewer.isAdmin
+    requested === "/" && viewer && featured && !viewer.isAdmin
       ? await findParticipant(featured.id, viewer.id, viewer.email)
       : null;
   const destination = viewer?.isAdmin
@@ -39,9 +44,6 @@ export default async function LoginPage({
     : featured
       ? `/hackathons/${featured.slug}${!viewer || member ? "/portal" : ""}`
       : "/hackathons";
-  const requested = safeCallbackPath(
-    typeof query.callbackUrl === "string" ? query.callbackUrl : "/",
-  );
   const errorCode = typeof query.error === "string" ? query.error : "";
   const missing = missingAuthSettings();
 
@@ -53,7 +55,7 @@ export default async function LoginPage({
           <h1 id="entry-title">{featured?.title ?? "Singapore hackathons"}</h1>
           {featured && (
             <p className="entry-event-details">
-              <time dateTime={featured.startsAt.toISOString()}>
+              <time dateTime={featured.startsAt}>
                 {eventDate(featured.startsAt, featured.timezone)}
               </time>
               {featured.location && <span>{featured.location}</span>}

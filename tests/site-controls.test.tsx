@@ -55,7 +55,7 @@ describe("site navigation and sign-in", () => {
       "https://github.com/Haoming9527/Stripe-Hackathon",
     );
     fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
-    expect(f.signOut).toHaveBeenCalledWith({ callbackUrl: "/" });
+    await waitFor(() => expect(f.signOut).toHaveBeenCalledWith({ callbackUrl: "/" }));
   });
 
   it("disables guest sign-in when the provider is unavailable", async () => {
@@ -74,7 +74,7 @@ describe("site navigation and sign-in", () => {
     fireEvent.click(button);
     expect((await screen.findByRole("alert")).textContent).toContain("try again");
     fireEvent.click(button);
-    expect(f.signIn).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(f.signIn).toHaveBeenCalledTimes(2));
     expect(f.signIn).toHaveBeenLastCalledWith(
       "google",
       { callbackUrl: "/hackathons/build" },
@@ -91,12 +91,12 @@ describe("site navigation and sign-in", () => {
       </GoogleSignInButton>,
     );
     fireEvent.click(screen.getByRole("button", { name: "Join with Google" }));
+    expect((await screen.findByRole("alert")).textContent).toMatch(/Sign-in could not start/);
     expect(f.signIn).toHaveBeenCalledWith(
       "google",
       { callbackUrl: "/invite/abc?role=member#join" },
       { prompt: "select_account" },
     );
-    expect((await screen.findByRole("alert")).textContent).toMatch(/Sign-in could not start/);
     fireEvent.click(screen.getByRole("button", { name: "Join with Google" }));
     expect((screen.getByRole("button", { name: "Opening Google…" }) as HTMLButtonElement).disabled).toBe(
       true,

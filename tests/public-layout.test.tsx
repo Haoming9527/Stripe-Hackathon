@@ -1,12 +1,14 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import Layout from "../app/layout";
 
 vi.mock("next/font/google", () => ({
   Geist: () => ({ variable: "geist" }),
   Geist_Mono: () => ({ variable: "geist-mono" }),
 }));
-vi.mock("@vercel/analytics/next", () => ({ Analytics: () => null }));
+vi.mock("@vercel/analytics/next", () => ({
+  Analytics: () => <script defer src="/_vercel/insights/script.js" />,
+}));
 vi.mock("@/components/SiteHeader", () => ({
   SiteHeader: () => <header>Site navigation</header>,
   SiteFooter: () => <footer>Site policies</footer>,
@@ -24,6 +26,14 @@ vi.mock("@/components/SiteFrame", () => ({
     </>
   ),
 }));
+
+afterEach(() => vi.unstubAllEnvs());
+
+it.each([["1", true], [undefined, false]] as const)("loads the analytics endpoint when hosted on Vercel (%s)", (vercel, enabled) => {
+  vi.stubEnv("VERCEL", vercel);
+  const html = renderToStaticMarkup(<Layout>Home</Layout>);
+  expect(html.includes("/_vercel/insights/script.js")).toBe(enabled);
+});
 
 it("provides the skip link and places page content between the site landmarks", () => {
   const html = renderToStaticMarkup(

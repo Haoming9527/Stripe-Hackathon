@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import "@/app/styles/policy.css";
 
 export type PolicySection = {
   id: string;

@@ -2,15 +2,9 @@
 @import "./styles/navigation.css";
 @import "./styles/buttons.css";
 @import "./styles/home.css";
-@import "./styles/events.css";
-@import "./styles/gallery.css";
-@import "./styles/policy.css";
-@import "./styles/portal.css";
+@import "./styles/content.css";
 @import "./styles/forms.css";
-@import "./styles/teams.css";
-@import "./styles/credits.css";
 @import "./styles/utilities.css";
 @import "./styles/auth.css";
-@import "./styles/responsive-desktop.css";
 @import "./styles/responsive-mobile.css";
 @import "./styles/accessibility-navigation.css";

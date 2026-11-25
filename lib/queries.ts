@@ -49,6 +49,15 @@ export async function listPublicEvents() {
   });
 }
 
+export function findFeaturedEvent() {
+  return prisma.hackathon.findFirst({
+    where: { status: { in: ["ACTIVE", "ENDED"] } },
+    // The database enum orders ACTIVE ahead of ENDED.
+    orderBy: [{ status: "asc" }, { startsAt: "desc" }, { id: "asc" }],
+    select: { id: true, slug: true, title: true, startsAt: true, timezone: true, location: true },
+  });
+}
+
 export async function findPublicEvent(slug: string) {
   return prisma.hackathon.findFirst({
     where: { slug, status: { not: "DRAFT" } },

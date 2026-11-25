@@ -1,3 +1,4 @@
+import "@/app/styles/gallery.css";
 import Link from "next/link";
 import { NavigationIcon } from "@/components/NavigationIcon";
 import { notFound } from "next/navigation";

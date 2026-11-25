@@ -19,7 +19,7 @@
   padding: 6px var(--nav-inset);
 }
 
-.site-header:has(+ .landing-main .entry-hero) {
+.site-header:has(+ .landing-main) {
   position: absolute;
   top: 0;
 }

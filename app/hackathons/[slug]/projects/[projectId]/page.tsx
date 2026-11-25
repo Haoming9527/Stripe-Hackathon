@@ -1,3 +1,4 @@
+import "@/app/styles/gallery.css";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";

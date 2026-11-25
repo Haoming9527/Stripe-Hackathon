@@ -1,12 +1,13 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { performMutation } from "@/lib/domain";
 import type { ActionState } from "@/lib/types";
 import { DomainError } from "@/lib/validation";
 import { auditSecurityEvent } from "@/lib/security/audit";
+import { FEATURED_EVENT_TAG } from "@/lib/featured-event";
 
 export async function submitAction(
   _previous: ActionState,
@@ -32,6 +33,7 @@ export async function submitAction(
     return { success: false, message: message.slice(0, 500) };
   }
   if (viewer.isAdmin) auditSecurityEvent({ event: "mutation.succeeded", actorId: viewer.id, intent });
+  if (["event.save", "event.delete", "event.status"].includes(intent)) updateTag(FEATURED_EVENT_TAG);
   revalidatePath("/", "layout");
   if (result.redirectTo) redirect(result.redirectTo);
   return { success: true, message: result.message };

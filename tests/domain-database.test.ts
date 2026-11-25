@@ -25,7 +25,7 @@ import { eventEditValues, offerEditValues } from "../lib/admin-edit";
 import { joinInvitedHackathon } from "../lib/domain/participants";
 import { decryptVoucher } from "../lib/credits";
 import { authOptions } from "../lib/auth";
-import { findParticipant, findPublicEvent, listPublicEvents } from "../lib/queries";
+import { findFeaturedEvent, findParticipant, findPublicEvent, listPublicEvents } from "../lib/queries";
 
 const enabled = Boolean(process.env.TEST_DATABASE_URL);
 const suite = enabled ? describe : describe.skip;
@@ -96,6 +96,21 @@ suite("isolated PostgreSQL domain integration", () => {
       if (index < 4) await db.participant.create({ data: { hackathonId: eventId, normalizedEmail: user.email!, userId: user.id } });
     }
   }, 30_000);
+
+  it("features the latest active event, falling back to the latest ended event and excluding drafts", async () => {
+    const later = new Date("2100-01-01T00:00:00Z");
+    const event = await db.hackathon.create({ data: {
+      title: "Later event", slug: "later-event", status: "ENDED", startsAt: later, endsAt: later,
+      submissionOpensAt: later, submissionClosesAt: later, votingOpensAt: later, votingClosesAt: later,
+    } });
+    expect(await findFeaturedEvent()).toMatchObject({ id: eventId });
+    await db.hackathon.update({ where: { id: event.id }, data: { status: "ACTIVE" } });
+    expect(await findFeaturedEvent()).toMatchObject({ id: event.id });
+    await db.hackathon.updateMany({ data: { status: "ENDED" } });
+    expect(await findFeaturedEvent()).toMatchObject({ id: event.id });
+    await db.hackathon.updateMany({ data: { status: "DRAFT" } });
+    expect(await findFeaturedEvent()).toBeNull();
+  });
 
   it("enrolls invitees once, claims imported emails and respects revocation", async () => {
     const visitor = people[4];

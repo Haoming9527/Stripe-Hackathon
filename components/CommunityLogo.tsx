@@ -7,6 +7,7 @@ export function CommunityLogo() {
       alt="Stripe Community"
       width={1200}
       height={400}
+      sizes="(max-width: 680px) 144px, 164px"
       loading="eager"
       className="community-logo"
     />

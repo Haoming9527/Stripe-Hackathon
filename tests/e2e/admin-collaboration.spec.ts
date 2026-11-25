@@ -4,6 +4,7 @@ import { authenticate, eventId } from "./fixtures";
 test("admin sessions receive live changes and preserve an open draft", async ({
   page,
   browser,
+  request,
 }) => {
   const other = await browser.newContext();
   try {
@@ -22,12 +23,15 @@ test("admin sessions receive live changes and preserve an open draft", async ({
     await second.getByLabel("Prize name 2", { exact: true })
       .fill("Draft from second organizer");
     await page.bringToFront();
+    const previousLocation = await page.getByLabel("Location", { exact: true }).inputValue();
+    expect(await (await request.get("/")).text()).toContain(previousLocation);
     await page.getByLabel("Location", { exact: true }).fill("Community room");
     await expect(page.getByLabel("Location", { exact: true })).toHaveValue("Community room");
     await page.getByRole("button", { name: "Save event" }).click();
     await expect(
       page.getByText("Hackathon saved.", { exact: true }),
     ).toBeVisible();
+    expect(await (await request.get("/")).text()).toContain("Community room");
     await second.bringToFront();
     await expect(
       second.getByText(/Another organizer saved changes/),

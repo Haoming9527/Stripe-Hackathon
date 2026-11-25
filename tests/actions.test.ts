@@ -1,12 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { submitAction } from "../lib/actions";
 import { requireUser } from "../lib/auth";
 import { performMutation } from "../lib/domain";
 import { DomainError } from "../lib/validation";
 
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/cache", async (importOriginal) => ({
+  ...await importOriginal<typeof import("next/cache")>(),
+  revalidatePath: vi.fn(),
+  updateTag: vi.fn(),
+}));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 vi.mock("../lib/auth", () => ({ requireUser: vi.fn() }));
 vi.mock("../lib/domain", () => ({ performMutation: vi.fn() }));
@@ -34,6 +38,7 @@ describe("form actions", () => {
     await expect(submit("team.create")).resolves.toEqual({ success: true, message: "Team created." });
     expect(performMutation).toHaveBeenCalledWith("team.create", expect.any(FormData), viewer);
     expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
+    expect(updateTag).not.toHaveBeenCalled();
     expect(info).not.toHaveBeenCalled();
   });
 
@@ -46,12 +51,21 @@ describe("form actions", () => {
     });
     const info = vi.spyOn(console, "info").mockImplementation(() => {});
     await expect(submit("event.save")).rejects.toBe(navigation);
+    expect(updateTag).toHaveBeenCalledWith("public-featured-event");
     expect(redirect).toHaveBeenCalledWith("/admin/new-event");
     expect(JSON.parse(info.mock.calls[0][0])).toMatchObject({
       actorId: viewer.id,
       intent: "event.save",
       event: "mutation.succeeded",
     });
+  });
+
+  it.each(["event.delete", "event.status"])("expires featured data after %s", async (intent) => {
+    vi.mocked(requireUser).mockResolvedValue({ ...viewer, isAdmin: true });
+    vi.mocked(performMutation).mockResolvedValue({ message: "Updated." });
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    await submit(intent);
+    expect(updateTag).toHaveBeenCalledWith("public-featured-event");
   });
 
   it("returns bounded validation feedback and keeps arbitrary form input out of the audit log", async () => {
@@ -80,6 +94,7 @@ describe("form actions", () => {
       intent: "event.save",
     });
     expect(error.mock.calls[0][0]).not.toContain(failure);
+    expect(updateTag).not.toHaveBeenCalled();
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 

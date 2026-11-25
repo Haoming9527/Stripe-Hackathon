@@ -29,14 +29,14 @@ it("offers an accessible loading indicator, recovery action, and gallery link fo
   expect(screen.getByRole("link", { name: "Explore hackathons" }).getAttribute("href")).toBe("/hackathons");
 });
 
-it("shows sign-out on the login page and sends the account back there", () => {
+it("shows sign-out on the login page and sends the account back there", async () => {
   f.pathname.mockReturnValue("/");
   const view = render(<SignOutButton />);
   expect(screen.queryByRole("button")).toBeNull();
   f.pathname.mockReturnValue("/login");
   view.rerender(<SignOutButton />);
   fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
-  expect(f.signOut).toHaveBeenCalledWith({ callbackUrl: "/login" });
+  await waitFor(() => expect(f.signOut).toHaveBeenCalledWith({ callbackUrl: "/login" }));
 });
 
 it("submits a participant invite once after sign-in, including under Strict Mode", () => {

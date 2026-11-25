@@ -2,7 +2,6 @@
 
 import { useId, useState } from "react";
 import { ChevronRight } from "lucide-react";
-import { signIn, signOut } from "next-auth/react";
 import { safeCallbackPath } from "@/lib/auth-policy";
 
 export function HeaderAuthButton({
@@ -20,6 +19,7 @@ export function HeaderAuthButton({
     setPending(true);
     setFailed(false);
     try {
+      const { signIn, signOut } = await import("next-auth/react");
       if (signedIn) {
         await signOut({ callbackUrl: "/" });
       } else {
