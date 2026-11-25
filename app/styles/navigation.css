@@ -203,6 +203,7 @@
 }
 
 .footer-inner a {
+  gap: 6px;
   display: inline-flex;
   align-items: center;
   min-height: var(--footer-link-height);

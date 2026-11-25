@@ -16,10 +16,11 @@ test("guests browse galleries without private data and mobile pages stay within 
   await expect(page.getByRole("banner")).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Singapore community" })).toHaveAttribute("href", "https://www.stripecommunity.com/public/clubs/singapore-r40ia");
   const footer = page.getByRole("contentinfo");
-  const docsLink = footer.getByRole("link", { name: "Developer resources" });
-  await expect(docsLink).toHaveAttribute("href", "https://docs.stripe.com/");
+  const githubLink = footer.getByRole("link", { name: "Star on GitHub" });
+  await expect(githubLink.locator("svg")).toBeVisible();
+  await expect(footer.getByRole("link", { name: "Developer resources" })).toHaveCount(0);
   await expect(footer).toHaveCSS("border-top-width", "0px");
-  expect(await docsLink.evaluate(link => document.documentElement.clientWidth - link.getBoundingClientRect().right)).toBeLessThanOrEqual(20);
+  expect(await githubLink.evaluate(link => document.documentElement.clientWidth - link.getBoundingClientRect().right)).toBeLessThanOrEqual(20);
   expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1)).toBe(true);
   const galleryLink = page.getByRole("link", { name: "Browse the public galleries", exact: true });
   await expect(galleryLink).toHaveAttribute("href", "/hackathons");
@@ -50,7 +51,7 @@ test("guests browse galleries without private data and mobile pages stay within 
   await expect(page.getByRole("banner")).not.toBeInViewport();
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
   await expect(page.getByRole("contentinfo")).toBeVisible();
-  await expect(page.getByRole("contentinfo")).toHaveText("Developer resources");
+  await expect(page.getByRole("contentinfo").getByRole("link", { name: "Star on GitHub" })).toHaveAttribute("href", "https://github.com/Haoming9527/Stripe-Hackathon");
   await expect(page.getByRole("link", { name: "Seeded public project", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Sign in to vote" }).first()).toBeVisible();
   await expect(page.getByText("Unpublished private draft", { exact: true })).toHaveCount(0);
