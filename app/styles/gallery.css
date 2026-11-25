@@ -43,6 +43,15 @@
   white-space: pre-line;
   overflow-wrap: anywhere;
 }
+.event-markdown { overflow-wrap: anywhere; }
+.event-markdown > * + * { margin-top: 0.85em; }
+.event-markdown p { white-space: pre-line; }
+.event-markdown :is(ul, ol) { padding-inline-start: 1.5em; }
+.event-markdown ul { list-style: disc; }
+.event-markdown ol { list-style: decimal; }
+.event-markdown a { color: var(--purple); text-decoration: underline; }
+.event-markdown pre { overflow-x: auto; }
+.event-markdown img { max-width: 100%; height: auto; }
 .gallery-card-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

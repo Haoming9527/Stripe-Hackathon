@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EventDescription } from "@/components/EventDescription";
 import { windowIsOpen } from "@/lib/validation";
 import { ActionForm } from "@/components/ActionForm";
 import { eventDate } from "../format";
@@ -44,17 +45,10 @@ export function Overview({ event }: { event: EventDetails }) {
             <Status status={event.status} />
           </div>
           <div className={styles.sectionBody}>
-            <p
-              style={{
-                fontSize: 14,
-                lineHeight: 1.8,
-                color: "#425a70",
-                whiteSpace: "pre-wrap",
-              }}
-            >
+            <EventDescription>
               {event.description ||
                 "Add a description in event settings to give participants a clear brief."}
-            </p>
+            </EventDescription>
             <hr className={styles.divider} />
             <div className={styles.columns}>
               <div>

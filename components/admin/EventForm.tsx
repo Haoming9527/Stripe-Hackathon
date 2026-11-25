@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Hackathon, Track } from "@prisma/client";
 import { ActionForm } from "@/components/ActionForm";
+import { EventDescription } from "@/components/EventDescription";
 import styles from "./styles";
 import { eventEditValues } from "@/lib/admin-edit";
 import { localDateValue } from "./format";
@@ -107,6 +108,7 @@ export default function EventForm({
 }) {
   const timezone = event?.timezone || "Asia/Singapore";
   const [zone, setZone] = useState(timezone);
+  const [description, setDescription] = useState(event?.description ?? "");
   return (
     <ActionForm intent="event.save">
       {event && <input type="hidden" name="id" value={event.id} />}
@@ -172,11 +174,17 @@ export default function EventForm({
             <textarea
               name="description"
               rows={5}
-              defaultValue={event?.description}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               placeholder="Tell participants what they’ll be building and what to expect."
               maxLength={20000}
             />
+            <small>Markdown supported. Use *italic*, **bold**, or a list.</small>
           </label>
+          <details>
+            <summary>Preview event description</summary>
+            {description.trim() ? <EventDescription>{description}</EventDescription> : <p>Enter a description to preview it here.</p>}
+          </details>
           <div className={styles.columns}>
             <label className={styles.field}>
               Location

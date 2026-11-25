@@ -1,4 +1,5 @@
 import "server-only";
+import { EventDescription } from "@/components/EventDescription";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -26,7 +27,7 @@ export function OverviewTab({
         <div>
           <h2>Event overview</h2>
           {event.description && (
-            <p className="prose preserve-lines">{event.description}</p>
+            <EventDescription>{event.description}</EventDescription>
           )}
           <div className="event-meta">
             <span>
