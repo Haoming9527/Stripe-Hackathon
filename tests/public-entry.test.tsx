@@ -57,6 +57,8 @@ beforeEach(() => {
 it("shows the featured event and a Google sign-in button for guests", async () => {
   const html = await home();
   expect(html).toContain("Build Week");
+  expect(html).toContain('Organized by the <a href="https://www.stripecommunity.com/public/clubs/singapore-r40ia">Singapore Stripe Community</a>');
+  expect(html.indexOf("Organized by")).toBeLessThan(html.indexOf("Sign in with Google"));
   expect(html).toContain(`dateTime="${event.startsAt.toISOString()}"`);
   expect(html).toContain("Sign in with Google");
   expect(f.member).not.toHaveBeenCalled();

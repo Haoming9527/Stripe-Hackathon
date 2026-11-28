@@ -69,6 +69,12 @@
   overflow-wrap: anywhere;
 }
 
+.entry-intro a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
 .entry-event-details {
   display: flex;
   flex-wrap: wrap;

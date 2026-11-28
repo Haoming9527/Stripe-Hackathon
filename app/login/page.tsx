@@ -7,6 +7,7 @@ import { findParticipant } from "@/lib/queries";
 import { ArrowRight } from "lucide-react";
 import { CommunityGradient } from "@/components/CommunityGradient";
 import { eventDate } from "@/lib/presentation";
+import { SINGAPORE_COMMUNITY_URL } from "@/lib/community";
 import { LoginButtons, SignOutButton } from "./login-buttons";
 
 export const metadata: Metadata = { title: "Sign in" };
@@ -62,9 +63,12 @@ export default async function LoginPage({
             </p>
           )}
           <p className="entry-intro">
-            {viewer
-              ? `Signed in as ${viewer.email}`
-              : "Build with the Stripe community in Singapore. Sign in to join your team and submit your project."}
+            {viewer ? `Signed in as ${viewer.email}` : (
+              <>
+                Organized by the <a href={SINGAPORE_COMMUNITY_URL}>Singapore Stripe Community</a>.
+                {" "}Sign in to join your team and submit your project.
+              </>
+            )}
           </p>
           <div className="entry-controls" id="participant-access">
             {viewer ? (
