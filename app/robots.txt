@@ -1,3 +1,2 @@
-# Allow crawlers to read the site-wide X-Robots-Tag: noindex response header.
 User-agent: *
-Allow: /
+Disallow: /
