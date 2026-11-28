@@ -1,6 +1,7 @@
 /** Baseline browser protections compatible with Next's streamed inline scripts. */
 export function securityHeaders(production: boolean) {
   return [
+    { key: "X-Robots-Tag", value: "noindex" },
     { key: "X-Content-Type-Options", value: "nosniff" },
     { key: "X-Frame-Options", value: "DENY" },
     { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
